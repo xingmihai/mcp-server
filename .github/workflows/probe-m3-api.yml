@@ -1,0 +1,55 @@
+name: 探测 M3 API
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: 下载 material3 AAR 并输出 API 清单
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3/1.5.0-beta02/material3-1.5.0-beta02.aar"
+          curl -sSL --retry 3 -o /tmp/m3.aar "$URL"
+          echo "AAR size: $(wc -c < /tmp/m3.aar)"
+          mkdir -p /tmp/m3 && cd /tmp/m3
+          unzip -o -q /tmp/m3.aar classes.jar
+          jar xf classes.jar
+          {
+            echo "===== CLASSES ====="
+            find androidx/compose/material3 -maxdepth 1 -name '*.class' \
+              | sed 's#.*/##; s#\.class##' \
+              | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Fab|Toolbar|MaterialShapes' \
+              | sort -u | head -200
+            echo "===== JAVAP ====="
+            for c in ButtonGroupKt SegmentedButtonKt FloatingToolbarKt LoadingIndicatorKt \
+                     ShortNavigationBarKt SnackbarKt BadgeKt ModalBottomSheetKt \
+                     SplitButtonLayoutKt MaterialExpressiveThemeKt MotionSchemeKt \
+                     ShapesKt NavigationBarKt WavyProgressIndicatorKt \
+                     FlexibleBottomAppBarKt FloatingActionButtonMenuKt \
+                     ToggleFloatingActionButtonKt PullToRefreshBoxKt; do
+              out=$(javap -public -classpath classes.jar "androidx.compose.material3.$c" 2>/dev/null | head -45)
+              if [ -n "$out" ]; then echo "--- $c ---"; echo "$out"; fi
+            done
+          } > /tmp/api.txt
+          echo "total lines: $(wc -l < /tmp/api.txt)"
+          python3 - <<'PY'
+          from pathlib import Path
+          lines = Path('/tmp/api.txt').read_text(errors='replace').splitlines()
+          chunk, n, idx = [], 0, 1
+          for l in lines:
+            if sum(len(x) + 1 for x in chunk) + len(l) > 3500:
+              text = '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)
+              print(f'::notice title=M3API-{idx}::{text}')
+              idx += 1; chunk = []
+            chunk.append(l)
+          if chunk:
+            text = '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)
+            print(f'::notice title=M3API-{idx}::{text}')
+          PY
