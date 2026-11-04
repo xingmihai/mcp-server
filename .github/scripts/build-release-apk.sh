@@ -41,7 +41,7 @@ cat "$LOG"
 if [ "$RC" -ne 0 ]; then
   LN=$(grep -n '^\* What went wrong:' "$LOG" | head -1 | cut -d: -f1)
   [ -z "$LN" ] && LN=1
-  SUMMARY=$({ grep -E '^e: |^w: ' "$LOG" | head -60
+  SUMMARY=$({ grep -A 6 -E '^e: |^w: ' "$LOG" | head -200
               sed -n "${LN},$((LN+22))p" "$LOG"; } \
     | sed 's/%/%25/g; s/\r/%0D/g' \
     | awk 'BEGIN{s=""} {printf "%s%s", s, $0; s="%0A"} END{print ""}')

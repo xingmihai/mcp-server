@@ -688,7 +688,7 @@ private fun HomeTab(
                 // 首页点名能力：Split button —— 主按钮 + 关联动作菜单（连通形状 + 按压形变）
                 var showMainMenu by remember { mutableStateOf(false) }
                 SplitButtonLayout(
-                    leadingContent = {
+                    leadingButton = {
                         SplitButtonDefaults.LeadingButton(
                             onClick = if (status.running) onStopServer else onStartServer,
                             interactionSource = buttonInteraction,
@@ -707,7 +707,7 @@ private fun HomeTab(
                             Text(if (status.running) "停止" else "启动")
                         }
                     },
-                    trailingContent = {
+                    trailingButton = {
                         Box {
                             SplitButtonDefaults.TrailingButton(onClick = { showMainMenu = true }) {
                                 MaterialSymbol(MaterialSymbols.Tune, contentDescription = "更多操作", size = 20.dp)
