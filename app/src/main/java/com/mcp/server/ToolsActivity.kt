@@ -19,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -280,7 +281,7 @@ private fun ToolDetailDialog(tool: ToolDefinition, onDismiss: () -> Unit) {
                 Text(
                     "当前状态：${if (ToolKit.isEnabled(tool.name)) "已开启" else "已关闭"}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = if (ToolKit.isEnabled(tool.name)) Color(0xFF2E7D32) else Color(0xFFC62828),
+                    color = if (ToolKit.isEnabled(tool.name)) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 )
             }
         },

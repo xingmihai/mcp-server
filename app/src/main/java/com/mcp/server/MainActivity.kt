@@ -12,6 +12,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import com.mcp.server.server.McpServerService
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3StartActivity
 import com.mcp.server.server.LogStore
 
 class MainActivity : ComponentActivity() {
@@ -51,9 +52,9 @@ class MainActivity : ComponentActivity() {
                 MainScreen(
                     onStartServer = { startServer() },
                     onStopServer = { stopServer() },
-                    onOpenTools = { startActivity(Intent(this, ToolsActivity::class.java)) },
-                    onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
-                    onOpenAbout = { startActivity(Intent(this, AboutActivity::class.java)) },
+                    onOpenTools = { m3StartActivity(Intent(this, ToolsActivity::class.java)) },
+                    onOpenSettings = { m3StartActivity(Intent(this, SettingsActivity::class.java)) },
+                    onOpenAbout = { m3StartActivity(Intent(this, AboutActivity::class.java)) },
                     onClearLogs = { LogStore.clear() },
                     showStorageDialog = firstRun && needStorage,
                     onStorageDialogDismiss = {

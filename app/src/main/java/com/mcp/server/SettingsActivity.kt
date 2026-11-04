@@ -28,6 +28,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -570,7 +571,7 @@ private fun PermissionRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (granted) {
-            Text("已授权", color = Color(0xFF2E7D32), style = MaterialTheme.typography.labelLarge)
+            Text("已授权", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
         } else {
             TextButton(onClick = onAction) { Text(actionText) }
         }

@@ -5,10 +5,17 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,6 +34,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -50,6 +59,7 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -83,8 +93,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.m3DefaultEffectsSpec
+import com.mcp.server.ui.theme.m3DefaultSpatialSpec
+import com.mcp.server.ui.theme.m3FastEffectsSpec
+import com.mcp.server.ui.theme.m3StartActivity
 import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.server.LogEntry
 import com.mcp.server.server.LogStore
@@ -232,7 +247,7 @@ fun MainScreen(
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        context.startActivity(Intent(context, BridgeActivity::class.java))
+                        context.m3StartActivity(Intent(context, BridgeActivity::class.java))
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
@@ -338,7 +353,7 @@ fun MainScreen(
                             MaterialSymbol(MaterialSymbols.Settings, contentDescription = "设置")
                         }
                         IconButton(onClick = {
-                            context.startActivity(Intent(context, BridgeActivity::class.java))
+                            context.m3StartActivity(Intent(context, BridgeActivity::class.java))
                         }) {
                             MaterialSymbol(MaterialSymbols.Link, contentDescription = "MCP 桥接")
                         }
@@ -346,7 +361,28 @@ fun MainScreen(
                 }
             },
         ) { padding ->
-            if (selectedTab == 0) {
+            AnimatedContent(
+                targetState = selectedTab,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (fadeIn(animationSpec = m3FastEffectsSpec<Float>()) +
+                            slideInHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { it / 6 })
+                            .togetherWith(
+                                fadeOut(animationSpec = m3FastEffectsSpec<Float>()) +
+                                    slideOutHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { -it / 6 }
+                            )
+                    } else {
+                        (fadeIn(animationSpec = m3FastEffectsSpec<Float>()) +
+                            slideInHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { -it / 6 })
+                            .togetherWith(
+                                fadeOut(animationSpec = m3FastEffectsSpec<Float>()) +
+                                    slideOutHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { it / 6 }
+                            )
+                    }
+                },
+                label = "tabSharedAxis",
+            ) { tab ->
+                if (tab == 0) {
                 HomeTab(
                     context = context,
                     status = status,
@@ -361,7 +397,7 @@ fun MainScreen(
                     },
                     modifier = Modifier.padding(padding),
                 )
-            } else {
+                } else {
                 Column(modifier = Modifier.padding(padding).fillMaxSize()) {
                     SingleChoiceSegmentedButtonRow(
                         modifier = Modifier
@@ -387,6 +423,7 @@ fun MainScreen(
                         } else logs,
                         modifier = Modifier.weight(1f),
                     )
+                }
                 }
             }
         }
@@ -529,7 +566,15 @@ private fun HomeTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // ===== 状态卡片 =====
-        // Expressive 弹性呼吸：运行中状态灯用 spring 缓动明暗脉动
+        // M3 Motion：状态灯从主题 motionScheme 取 effects spec，不再手写 spring 参数
+        // 按压时按钮圆角做形状形变（shape morph）
+        val buttonInteraction = remember { MutableInteractionSource() }
+        val buttonPressed by buttonInteraction.collectIsPressedAsState()
+        val buttonCorner by animateDpAsState(
+            targetValue = if (buttonPressed) 16.dp else 28.dp,
+            animationSpec = m3DefaultSpatialSpec(),
+            label = "buttonShapeMorph",
+        )
         var pulseOn by remember { mutableStateOf(true) }
         LaunchedEffect(Unit) {
             while (true) {
@@ -539,10 +584,7 @@ private fun HomeTab(
         }
         val pulseAlpha by animateFloatAsState(
             targetValue = if (status.running && pulseOn) 1f else if (status.running) 0.42f else 0.6f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessLow,
-            ),
+            animationSpec = m3DefaultEffectsSpec<Float>(),
             label = "statusPulse",
         )
         Card(
@@ -561,7 +603,7 @@ private fun HomeTab(
                     modifier = Modifier
                         .size(14.dp)
                         .background(
-                            color = (if (status.running) Color(0xFF2E7D32) else Color(0xFF9E9E9E))
+                            color = (if (status.running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 .copy(alpha = pulseAlpha),
                             shape = CircleShape,
                         ),
@@ -583,7 +625,8 @@ private fun HomeTab(
                 }
                 Button(
                     onClick = if (status.running) onStopServer else onStartServer,
-                    shape = MaterialTheme.shapes.largeIncreased,
+                    shape = RoundedCornerShape(buttonCorner),
+                    interactionSource = buttonInteraction,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (status.running) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.primary,
@@ -603,6 +646,7 @@ private fun HomeTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 48.dp)
                     .clickable(onClick = onEditPort)
                     .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -658,19 +702,19 @@ private fun HomeTab(
                             Text(
                                 "隧道已连接",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFF2E7D32),
+                                color = MaterialTheme.colorScheme.primary,
                             )
                         } else {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 LoadingIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = Color(0xFFF9A825),
+                                    color = MaterialTheme.colorScheme.tertiary,
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     "隧道连接中",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = Color(0xFFF9A825),
+                                    color = MaterialTheme.colorScheme.tertiary,
                                 )
                             }
                         }
@@ -757,9 +801,9 @@ private fun LogTab(logs: List<LogEntry>, modifier: Modifier = Modifier) {
                     entry.level,
                     style = MaterialTheme.typography.labelSmall,
                     color = when (entry.level) {
-                        "E" -> Color(0xFFC62828)
-                        "W" -> Color(0xFFF9A825)
-                        else -> Color(0xFF2E7D32)
+                        "E" -> MaterialTheme.colorScheme.error
+                        "W" -> MaterialTheme.colorScheme.tertiary
+                        else -> MaterialTheme.colorScheme.primary
                     },
                     fontFamily = FontFamily.Monospace,
                 )

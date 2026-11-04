@@ -12,9 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -46,6 +44,7 @@ import androidx.lifecycle.viewmodel.*
 import androidx.savedstate.*
 import com.mcp.server.MainActivity
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3DefaultEffectsSpec
 import kotlinx.coroutines.delay
 
 /**
@@ -250,10 +249,7 @@ private fun FloatContent(
     }
     val dotAlpha by animateFloatAsState(
         targetValue = if (active && pulseOn) 1f else if (active) 0.42f else 0.6f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
+        animationSpec = m3DefaultEffectsSpec<Float>(),
         label = "floatDotPulse",
     )
 
@@ -280,7 +276,7 @@ private fun FloatContent(
                 modifier = Modifier
                     .size(10.dp)
                     .background(
-                        color = (if (active) Color(0xFF2E7D32) else Color(0xFFB3261E))
+                        color = (if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                             .copy(alpha = dotAlpha),
                         shape = CircleShape,
                     ),
