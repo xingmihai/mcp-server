@@ -40,17 +40,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
-import androidx.lifecycle.ViewTreeLifecycleOwner
-import androidx.lifecycle.ViewTreeViewModelStoreOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+// 新版本用 View 扩展函数挂载三个 owner；用通配符避免不同 artifact 的包名差异
+import androidx.lifecycle.*
+import androidx.lifecycle.viewmodel.*
+import androidx.savedstate.*
 import com.mcp.server.MainActivity
 import com.mcp.server.ui.theme.McpTheme
 import kotlinx.coroutines.delay
@@ -183,9 +176,9 @@ class FloatWindowService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
             val view = ComposeView(this).apply {
                 // 挂上三个 owner，ComposeView 才能脱离 Activity 独立工作
-                ViewTreeLifecycleOwner.set(this, this@FloatWindowService)
-                ViewTreeViewModelStoreOwner.set(this, this@FloatWindowService)
-                ViewTreeSavedStateRegistryOwner.set(this, this@FloatWindowService)
+                setViewTreeLifecycleOwner(this@FloatWindowService)
+                setViewTreeViewModelStoreOwner(this@FloatWindowService)
+                setViewTreeSavedStateRegistryOwner(this@FloatWindowService)
                 setContent {
                     McpTheme {
                         FloatContent(

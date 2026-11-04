@@ -48,6 +48,7 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -380,11 +381,13 @@ fun MainScreen(
                         SegmentedButton(
                             selected = logFilter == 0,
                             onClick = { logFilter = 0 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             label = { Text("全部") },
                         )
                         SegmentedButton(
                             selected = logFilter == 1,
                             onClick = { logFilter = 1 },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             label = { Text("仅警告/错误") },
                         )
                     }
@@ -515,6 +518,7 @@ fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HomeTab(
     context: Context,
