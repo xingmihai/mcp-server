@@ -7,63 +7,37 @@ jobs:
   probe:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
-      - name: 下载 material3 AAR 并输出 API 清单
+      - name: 读取 POM 依赖与版本
         shell: bash
         run: |
           set +e
-          LOG=/tmp/probe.log
-          : > "$LOG"
+          LOG=/tmp/probe.log; : > "$LOG"
           say() { echo "$@" >> "$LOG"; }
-          BASE="https://dl.google.com/dl/android/maven2/androidx/compose/material3"
-          VER="1.5.0-beta02"
-          mkdir -p /tmp/m3 && cd /tmp/m3
-
-          for art in material3 material3-android; do
-            URL="$BASE/$art/$VER/$art-$VER.aar"
-            curl -sSL --retry 3 -o "/tmp/$art.aar" "$URL" 2>>"$LOG"
-            say "$art: curl_rc=$? size=$(wc -c < /tmp/$art.aar 2>/dev/null) magic=$(head -c 4 /tmp/$art.aar 2>/dev/null | xxd -p)"
-            if unzip -t "/tmp/$art.aar" >/dev/null 2>&1; then
-              mkdir -p "/tmp/m3/$art" && cd "/tmp/m3/$art"
-              unzip -o -q "/tmp/$art.aar"
-              say "$art entries: $(unzip -l /tmp/$art.aar | tail -n +4 | head -12 | tr '\n' ' ')"
-              for j in $(find . -name '*.jar'); do jar xf "$j"; done
-              cd /tmp/m3
-            fi
-          done
-
-          say "===== CLASSES ====="
-          find . -path '*androidx/compose/material3*' -maxdepth 8 -name '*.class' \
-            | sed 's#.*/##; s#\.class##' \
-            | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Toolbar|MaterialShapes' \
-            | sort -u | head -220 >> "$LOG"
-          say "class_count=$(find . -name '*.class' | wc -l)"
-
-          say "===== JAVAP ====="
-          CP=$(find /tmp/m3 -name '*.jar' | tr '\n' ':')
-          for c in ButtonGroupKt SegmentedButtonKt FloatingToolbarKt LoadingIndicatorKt \
-                   ShortNavigationBarKt SnackbarKt BadgeKt ModalBottomSheetKt \
-                   SplitButtonLayoutKt MaterialExpressiveThemeKt MotionSchemeKt \
-                   ShapesKt NavigationBarKt WavyProgressIndicatorKt \
-                   FlexibleBottomAppBarKt FloatingActionButtonMenuKt \
-                   ToggleFloatingActionButtonKt PullToRefreshBoxKt; do
-            out=$(javap -public -classpath "$CP" "androidx.compose.material3.$c" 2>/dev/null | head -40)
-            if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
-          done
-
+          DL="https://dl.google.com/dl/android/maven2"
+          curl -sSL --retry 3 -o /tmp/m3.pom "$DL/androidx/compose/material3/material3-android/1.5.0-beta02/material3-android-1.5.0-beta02.pom"
+          say "===== material3-android POM ====="
+          grep -E '<(groupId|artifactId|version)>' /tmp/m3.pom | sed 's/^ *//' | head -160 >> "$LOG"
+          say "===== graphics-shapes versions ====="
+          curl -sSL --retry 3 "$DL/androidx/graphics/graphics-shapes/maven-metadata.xml" \
+            | grep -oE '<version>[^<]+</version>' | tail -20 >> "$LOG"
+          say "===== savedstate versions ====="
+          curl -sSL --retry 3 "$DL/androidx/savedstate/savedstate-ktx/maven-metadata.xml" \
+            | grep -oE '<version>[^<]+</version>' | tail -12 >> "$LOG"
+          say "===== lifecycle-viewmodel versions ====="
+          curl -sSL --retry 3 "$DL/androidx/lifecycle/lifecycle-viewmodel-ktx/maven-metadata.xml" \
+            | grep -oE '<version>[^<]+</version>' | tail -12 >> "$LOG"
           python3 - <<'PY'
           from pathlib import Path
-          lines = Path('/tmp/probe.log').read_text(errors='replace').splitlines()
-          chunk, idx = [], 1
+          lines=Path('/tmp/probe.log').read_text(errors='replace').splitlines()
+          chunk,idx=[],1
           for l in lines:
-            if sum(len(x)+1 for x in chunk) + len(l) > 3000:
-              print('::notice title=M3API-%d::%s' % (idx, '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
-              idx += 1; chunk = []
+            if sum(len(x)+1 for x in chunk)+len(l)>3000:
+              print('::notice title=POM-%d::%s'%(idx,'%0A'.join(x.replace('%','%25') for x in chunk)))
+              idx+=1; chunk=[]
             chunk.append(l)
-          if chunk:
-            print('::notice title=M3API-%d::%s' % (idx, '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+          if chunk: print('::notice title=POM-%d::%s'%(idx,'%0A'.join(x.replace('%','%25') for x in chunk)))
           PY
