@@ -40,6 +40,19 @@ import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalFloatingToolbar
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -101,7 +114,7 @@ private data class StatusInfo(
     val tunnelActive: Boolean = false,
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainScreen(
     onStartServer: () -> Unit,
@@ -123,6 +136,8 @@ fun MainScreen(
     var portText by remember { mutableStateOf(Settings.port(context).toString()) }
     var showPortDialog by remember { mutableStateOf(false) }
     var showRestartHint by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    var logFilter by remember { mutableIntStateOf(0) } // 0=全部 1=仅警告/错误
 
     // 系统文件夹选择器：选择应用允许访问的文件夹作为工作区（SAF）
     val folderPicker = rememberLauncherForActivityResult(
@@ -246,6 +261,7 @@ fun MainScreen(
         },
     ) {
         Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 TopAppBar(
                     title = {
@@ -264,18 +280,20 @@ fun MainScreen(
                     },
                     actions = {
                         if (selectedTab == 1 && logs.isNotEmpty()) {
-                            TextButton(onClick = {
-                                val text = logs.joinToString("\n") {
-                                    "${it.timeText} [${it.level}] ${it.message}"
-                                }
-                                copyText(context, text)
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "已复制全部日志",
-                                    android.widget.Toast.LENGTH_SHORT,
-                                ).show()
-                            }) { Text("复制") }
-                            TextButton(onClick = onClearLogs) { Text("清空") }
+                            // M3 Expressive：相关动作收进 ButtonGroup
+                            ButtonGroup(modifier = Modifier.padding(end = 8.dp)) {
+                                FilledTonalButton(onClick = {
+                                    val text = logs.joinToString("\n") {
+                                        "${it.timeText} [${it.level}] ${it.message}"
+                                    }
+                                    copyText(context, text)
+                                    scope.launch { snackbarHostState.showSnackbar("已复制全部日志") }
+                                }) { Text("复制") }
+                                FilledTonalButton(onClick = {
+                                    onClearLogs()
+                                    scope.launch { snackbarHostState.showSnackbar("日志已清空") }
+                                }) { Text("清空") }
+                            }
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -284,19 +302,46 @@ fun MainScreen(
                 )
             },
             bottomBar = {
-                NavigationBar {
-                    NavigationBarItem(
+                // M3 Expressive 紧凑底栏 + 日志条数 Badge
+                ShortNavigationBar {
+                    ShortNavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
                         icon = { Icon(Icons.Default.Home, contentDescription = null) },
                         label = { Text("主页") },
                     )
-                    NavigationBarItem(
+                    ShortNavigationBarItem(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
-                        icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                        icon = {
+                            BadgedBox(
+                                badge = {
+                                    if (logs.isNotEmpty()) {
+                                        Badge { Text(logs.size.coerceAtMost(99).toString()) }
+                                    }
+                                },
+                            ) { Icon(Icons.Default.Info, contentDescription = null) }
+                        },
                         label = { Text("日志") },
                     )
+                }
+            },
+            floatingActionButton = {
+                if (selectedTab == 0) {
+                    // 浮动工具栏：收拢三个高频入口
+                    HorizontalFloatingToolbar(expanded = true) {
+                        IconButton(onClick = onOpenTools) {
+                            Icon(Icons.Outlined.Tune, contentDescription = "工具列表")
+                        }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Outlined.Settings, contentDescription = "设置")
+                        }
+                        IconButton(onClick = {
+                            context.startActivity(Intent(context, BridgeActivity::class.java))
+                        }) {
+                            Icon(Icons.Outlined.Link, contentDescription = "MCP 桥接")
+                        }
+                    }
                 }
             },
         ) { padding ->
@@ -316,10 +361,30 @@ fun MainScreen(
                     modifier = Modifier.padding(padding),
                 )
             } else {
-                LogTab(
-                    logs = logs,
-                    modifier = Modifier.padding(padding),
-                )
+                Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                    SingleChoiceSegmentedButtonRow(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        SegmentedButton(
+                            selected = logFilter == 0,
+                            onClick = { logFilter = 0 },
+                            label = { Text("全部") },
+                        )
+                        SegmentedButton(
+                            selected = logFilter == 1,
+                            onClick = { logFilter = 1 },
+                            label = { Text("仅警告/错误") },
+                        )
+                    }
+                    LogTab(
+                        logs = if (logFilter == 1) {
+                            logs.filter { it.level == "E" || it.level == "W" }
+                        } else logs,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -378,11 +443,9 @@ fun MainScreen(
                             if (McpServerService.server?.isRunning == true) {
                                 showRestartHint = true
                             } else {
-                                android.widget.Toast.makeText(
-                                    context,
-                                    "端口已保存为 $p，启动服务器后生效",
-                                    android.widget.Toast.LENGTH_SHORT,
-                                ).show()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("端口已保存为 $p，启动服务器后生效")
+                                }
                             }
                         }) { Text("保存") }
                     }
@@ -393,14 +456,26 @@ fun MainScreen(
 
     // ===== 端口修改后重启提示弹窗 =====
     if (showRestartHint) {
-        AlertDialog(
-            onDismissRequest = { showRestartHint = false },
-            title = { Text("端口已修改") },
-            text = { Text("新端口将在下次启动时生效。建议先停止再重新启动服务器。") },
-            confirmButton = {
-                TextButton(onClick = { showRestartHint = false }) { Text("知道了") }
-            },
-        )
+        ModalBottomSheet(onDismissRequest = { showRestartHint = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+            ) {
+                Text("端口已修改", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "新端口将在下次启动时生效。建议先停止再重新启动服务器。",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(20.dp))
+                FilledTonalButton(
+                    onClick = { showRestartHint = false },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("知道了") }
+                Spacer(Modifier.height(8.dp))
+            }
+        }
     }
 
     // ===== 首次启动引导弹窗 =====
@@ -541,7 +616,7 @@ private fun HomeTab(
 
         // ===== 连接地址（仅运行时显示） =====
         if (status.running) {
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     val ip = status.ips.firstOrNull() ?: "192.168.x.x"
                     val url = "http://$ip:$currentPort/mcp"
@@ -581,11 +656,18 @@ private fun HomeTab(
                                 color = Color(0xFF2E7D32),
                             )
                         } else {
-                            Text(
-                                "隧道连接中",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(0xFFF9A825),
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                LoadingIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    color = Color(0xFFF9A825),
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    "隧道连接中",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color(0xFFF9A825),
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(4.dp))
@@ -599,7 +681,7 @@ private fun HomeTab(
         }
 
         // ===== 工作区卡片 =====
-        Card {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Folder, contentDescription = null,

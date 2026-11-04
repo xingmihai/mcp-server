@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -220,7 +221,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             // ===== 访问令牌 =====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("访问令牌", style = MaterialTheme.typography.titleSmall)
                     Text("客户端连接时校验 Authorization: Bearer <token>",
@@ -265,7 +266,7 @@ fun SettingsScreen(
             }
 
             // ===== 外观（M3 Expressive）=====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("外观", style = MaterialTheme.typography.titleSmall)
                     Text("全局使用 Material 3 Expressive 主题（弹性动效、圆润形状、强调排版）",
@@ -290,7 +291,7 @@ fun SettingsScreen(
             }
 
             // ===== 后台保活 =====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("后台保活", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
@@ -336,7 +337,7 @@ fun SettingsScreen(
             }
 
             // ===== 内网穿透 =====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("内网穿透", style = MaterialTheme.typography.titleSmall)
                     Text("将本地 MCP 服务器通过远程服务器暴露为公网地址",
@@ -403,7 +404,7 @@ fun SettingsScreen(
             }
 
             // ===== 权限 =====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("权限", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(8.dp))
@@ -452,7 +453,7 @@ fun SettingsScreen(
             }
 
             // ===== 高级执行权限（脚本/系统命令） =====
-            Card {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("高级执行权限（脚本/系统命令）", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(8.dp))

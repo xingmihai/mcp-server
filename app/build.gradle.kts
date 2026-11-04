@@ -70,6 +70,9 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
+    // 悬浮窗 ComposeView 脱离 Activity 运行所需的 owner 支持
+    implementation("androidx.lifecycle:lifecycle-viewmodel:2.11.0")
+    implementation("androidx.savedstate:savedstate:1.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.google.code.gson:gson:2.11.0")
     // Shizuku：以 shell 权限执行系统命令

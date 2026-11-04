@@ -7,31 +7,63 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ServiceInfo
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Typeface
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.view.Gravity
-import android.view.MotionEvent
-import android.view.View
-import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.ViewTreeLifecycleOwner
+import androidx.lifecycle.ViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.ViewTreeSavedStateRegistryOwner
 import com.mcp.server.MainActivity
-import com.mcp.server.R
+import com.mcp.server.ui.theme.McpTheme
+import kotlinx.coroutines.delay
 
 /**
- * 悬浮窗：开关开启后，只要应用在运行就持续显示。
- * 胶囊形状小窗，只显示状态呼吸灯 + 服务器运行状态（运行中/已停止），可拖动，点击回到主界面。
- * 作为前台服务运行（低优先级通知），避免 Android 8+ 后台启动限制，同时更不易被系统回收。
- * 需要 SYSTEM_ALERT_WINDOW 权限。
+ * 悬浮窗：用 ComposeView 渲染，直接复用全局 M3 Expressive 主题（配色 / 形状 / 动效）。
+ * 胶囊小窗只显示状态呼吸灯 + 运行中/已停止，可拖动，点击回到主界面。
+ * 作为前台服务运行（低优先级通知），需要 SYSTEM_ALERT_WINDOW 权限。
+ *
+ * ComposeView 在 WindowManager 中需要 Lifecycle / ViewModelStore / SavedStateRegistry 三个 owner，
+ * 由本 Service 一并实现。
  */
-class FloatWindowService : Service() {
+class FloatWindowService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
     companion object {
         const val ACTION_START = "com.mcp.server.FLOAT_START"
@@ -53,35 +85,38 @@ class FloatWindowService : Service() {
         }
     }
 
-    private var windowManager: WindowManager? = null
-    private var floatView: View? = null
-    private var statusTv: TextView? = null
-    private val handler = Handler(Looper.getMainLooper())
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
 
-    private val updateRunnable = object : Runnable {
-        override fun run() {
-            updateText()
-            handler.postDelayed(this, 2000)
-        }
-    }
+    private val store = ViewModelStore()
+    override val viewModelStore: ViewModelStore get() = store
+
+    private val savedStateController = SavedStateRegistryController.create(this)
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
+
+    private var windowManager: WindowManager? = null
+    private var composeView: ComposeView? = null
 
     override fun onCreate() {
         super.onCreate()
         createChannel()
+        savedStateController.performRestore(null)
+        // ComposeView 需要生命周期至少进入 STARTED 才会开始组合
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
+        return when (intent?.action) {
             ACTION_STOP -> {
                 stopSelf()
-                return START_NOT_STICKY
+                START_NOT_STICKY
             }
             else -> {
-                // 必须尽快进入前台，否则 startForegroundService 会崩溃
                 startForeground(NOTIFICATION_ID, buildNotification())
-                if (floatView == null) showFloat()
-                else updateText()
-                return START_STICKY
+                if (composeView == null) showFloat()
+                START_STICKY
             }
         }
     }
@@ -128,35 +163,6 @@ class FloatWindowService : Service() {
         try {
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            // 运行状态（圆点 + 运行中/已停止）
-            val statusTv = TextView(this).apply {
-                setTextColor(Color.parseColor("#C8E6C9"))
-                textSize = 11f
-                typeface = Typeface.DEFAULT_BOLD
-                isClickable = true
-            }
-            this.statusTv = statusTv
-            // 状态提示（无背景色，与胶囊主体融为一体）
-            val statusBg = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = Gravity.CENTER
-                addView(statusTv, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
-            // 主体
-            val layout = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(16), dp(8), dp(16), dp(8))
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    cornerRadius = dp(28).toFloat()
-                    setColor(Color.parseColor("#CC3F51B5"))
-                }
-                addView(statusBg, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            }
-
             val type = if (Build.VERSION.SDK_INT >= 26) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -175,79 +181,122 @@ class FloatWindowService : Service() {
                 y = 200
             }
 
-            layout.setOnClickListener {
-                val i = Intent(this, MainActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                startActivity(i)
-            }
-            layout.setOnTouchListener(object : View.OnTouchListener {
-                private var startX = 0
-                private var startY = 0
-                private var touchX = 0f
-                private var touchY = 0f
-                private var moved = false
-
-                override fun onTouch(v: View, e: MotionEvent): Boolean {
-                    when (e.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            startX = params.x
-                            startY = params.y
-                            touchX = e.rawX
-                            touchY = e.rawY
-                            moved = false
-                        }
-                        MotionEvent.ACTION_MOVE -> {
-                            val dx = (e.rawX - touchX).toInt()
-                            val dy = (e.rawY - touchY).toInt()
-                            if (kotlin.math.abs(dx) > 8 || kotlin.math.abs(dy) > 8) moved = true
-                            params.x = startX + dx
-                            params.y = startY + dy
-                            try {
-                                windowManager?.updateViewLayout(v, params)
-                            } catch (_: Exception) {
-                            }
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            if (!moved) v.performClick()
-                        }
+            val view = ComposeView(this).apply {
+                // 挂上三个 owner，ComposeView 才能脱离 Activity 独立工作
+                ViewTreeLifecycleOwner.set(this, this@FloatWindowService)
+                ViewTreeViewModelStoreOwner.set(this, this@FloatWindowService)
+                ViewTreeSavedStateRegistryOwner.set(this, this@FloatWindowService)
+                setContent {
+                    McpTheme {
+                        FloatContent(
+                            onOpenMain = {
+                                startActivity(
+                                    Intent(this@FloatWindowService, MainActivity::class.java)
+                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                )
+                            },
+                            onDrag = { dx, dy ->
+                                params.x += dx
+                                params.y += dy
+                                try {
+                                    windowManager?.updateViewLayout(composeView, params)
+                                } catch (_: Exception) {
+                                }
+                            },
+                        )
                     }
-                    return true
                 }
-            })
+            }
 
-            windowManager?.addView(layout, params)
-            floatView = layout
-            updateText()
-            handler.post(updateRunnable)
+            windowManager?.addView(view, params)
+            composeView = view
             running = true
         } catch (_: Exception) {
             stopSelf()
         }
     }
 
-    private fun updateText() {
-        val tv = statusTv ?: return
-        val active = McpServerService.server?.isRunning == true
-        // 圆点随状态变色：运行中绿色、已停止红色
-        tv.text = if (active) "● 运行中" else "● 已停止"
-        tv.setTextColor(if (active) Color.parseColor("#C8E6C9") else Color.parseColor("#FFCDD2"))
-    }
-
-    private fun dp(v: Int): Int =
-        (v * resources.displayMetrics.density).toInt()
-
     override fun onDestroy() {
         running = false
-        handler.removeCallbacks(updateRunnable)
         try {
-            floatView?.let { windowManager?.removeView(it) }
+            composeView?.let { windowManager?.removeView(it) }
         } catch (_: Exception) {
         }
-        floatView = null
-        statusTv = null
+        composeView = null
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        store.clear()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+}
+
+/** 悬浮窗主体：状态呼吸灯 + 运行中/已停止 */
+@Composable
+private fun FloatContent(
+    onOpenMain: () -> Unit,
+    onDrag: (Int, Int) -> Unit,
+) {
+    var active by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            active = McpServerService.server?.isRunning == true
+            delay(2000)
+        }
+    }
+
+    var pulseOn by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            pulseOn = !pulseOn
+            delay(900)
+        }
+    }
+    val dotAlpha by animateFloatAsState(
+        targetValue = if (active && pulseOn) 1f else if (active) 0.42f else 0.6f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow,
+        ),
+        label = "floatDotPulse",
+    )
+
+    Surface(
+        shape = MaterialTheme.shapes.largeIncreased,
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.94f),
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        tonalElevation = 3.dp,
+        shadowElevation = 6.dp,
+        modifier = Modifier
+            .pointerInput(Unit) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    onDrag(dragAmount.x.toInt(), dragAmount.y.toInt())
+                }
+            }
+            .clickable(onClick = onOpenMain),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .background(
+                        color = (if (active) Color(0xFF2E7D32) else Color(0xFFB3261E))
+                            .copy(alpha = dotAlpha),
+                        shape = CircleShape,
+                    ),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = if (active) "运行中" else "已停止",
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+    }
 }
