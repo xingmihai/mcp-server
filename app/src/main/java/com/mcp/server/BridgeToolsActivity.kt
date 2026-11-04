@@ -14,16 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +35,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.bridge.BridgeConfig
 import com.mcp.server.bridge.BridgeManager
 import com.mcp.server.bridge.BridgeToolInfo
@@ -108,7 +103,7 @@ fun BridgeToolsScreen(bridgeId: String, onBack: () -> Unit = {}) {
                 title = { Text(bridge?.name ?: "桥接工具", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        MaterialSymbol(MaterialSymbols.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
@@ -124,7 +119,7 @@ fun BridgeToolsScreen(bridgeId: String, onBack: () -> Unit = {}) {
                             refresh++
                         }
                     }, enabled = !loading) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        MaterialSymbol(MaterialSymbols.Refresh, contentDescription = "刷新")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -225,11 +220,12 @@ private fun ToolSwitchCard(
             Spacer(Modifier.width(10.dp))
             // 圆圈开关按钮（与工具列表页一致）
             IconButton(onClick = onToggle) {
-                Icon(
-                    if (enabled) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                MaterialSymbol(
+                    if (enabled) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
                     contentDescription = if (enabled) "关闭工具" else "开启工具",
+                    filled = enabled,
                     tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(28.dp),
+                    size = 28.dp,
                 )
             }
         }

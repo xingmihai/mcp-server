@@ -15,16 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.tools.ToolDefinition
 import com.mcp.server.tools.ToolKit
 import com.mcp.server.ui.theme.McpTheme
@@ -74,7 +70,7 @@ fun ToolsScreen(onBack: () -> Unit = {}) {
                 title = { Text("工具列表", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        MaterialSymbol(MaterialSymbols.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -180,11 +176,12 @@ private fun ToolRow(
             Spacer(Modifier.width(10.dp))
             // 圆圈开关按钮
             IconButton(onClick = onToggle) {
-                Icon(
-                    if (enabled) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                MaterialSymbol(
+                    if (enabled) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
                     contentDescription = if (enabled) "关闭工具" else "开启工具",
+                    filled = enabled,
                     tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(28.dp),
+                    size = 28.dp,
                 )
             }
         }
@@ -227,11 +224,12 @@ private fun BridgeToolToggleRow(
             }
             Spacer(Modifier.width(10.dp))
             IconButton(onClick = onToggle) {
-                Icon(
-                    if (enabled) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                MaterialSymbol(
+                    if (enabled) MaterialSymbols.CheckCircle else MaterialSymbols.RadioButtonUnchecked,
                     contentDescription = if (enabled) "关闭工具" else "开启工具",
+                    filled = enabled,
                     tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(28.dp),
+                    size = 28.dp,
                 )
             }
         }

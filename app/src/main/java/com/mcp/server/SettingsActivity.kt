@@ -24,19 +24,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.outlined.Circle
-import androidx.compose.material.icons.outlined.Power
-import androidx.compose.material.icons.outlined.Public
-import androidx.compose.material.icons.outlined.Wallpaper
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,11 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.server.FloatWindowService
 import com.mcp.server.server.McpServerService
 import com.mcp.server.server.Settings
@@ -203,7 +195,7 @@ fun SettingsScreen(
                 title = { Text("设置", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        MaterialSymbol(MaterialSymbols.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -254,7 +246,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         IconButton(onClick = { copyText(context, token) }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "复制",
+                            MaterialSymbol(MaterialSymbols.ContentCopy, contentDescription = "复制",
                                 tint = MaterialTheme.colorScheme.primary)
                         }
                         FilledTonalButton(onClick = {
@@ -274,7 +266,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(6.dp))
                     ToggleRow(
-                        icon = Icons.Outlined.Wallpaper,
+                        icon = MaterialSymbols.Wallpaper,
                         title = "动态取色",
                         subtitle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
                             "跟随系统壁纸颜色（Android 12+）；关闭后使用应用自带配色"
@@ -296,7 +288,7 @@ fun SettingsScreen(
                     Text("后台保活", style = MaterialTheme.typography.titleSmall)
                     Spacer(Modifier.height(4.dp))
                     ToggleRow(
-                        icon = Icons.Outlined.Circle,
+                        icon = MaterialSymbols.Circle,
                         title = "WakeLock 保持运行",
                         subtitle = "屏幕熄灭后保持 CPU 唤醒，防止服务器被挂起",
                         checked = wakeLock,
@@ -311,14 +303,14 @@ fun SettingsScreen(
                         },
                     )
                     ToggleRow(
-                        icon = Icons.Outlined.Wallpaper,
+                        icon = MaterialSymbols.Wallpaper,
                         title = "悬浮窗",
                         subtitle = "开启后，只要应用在运行就持续显示状态小窗（可拖动、点击回主页）",
                         checked = floatWindow,
                         onCheckedChange = onFloatSwitch,
                     )
                     ToggleRow(
-                        icon = Icons.Outlined.Power,
+                        icon = MaterialSymbols.Power,
                         title = "开机自启 MCP 服务",
                         subtitle = "开机后自动启动 MCP 服务器（依赖系统允许自启动/后台启动）",
                         checked = autoStartMcp,
@@ -345,7 +337,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(10.dp))
                     ToggleRow(
-                        icon = Icons.Outlined.Public,
+                        icon = MaterialSymbols.Public,
                         title = "启用内网穿透",
                         subtitle = "开启后，启动服务器时默认自动连接隧道",
                         checked = tunnelEnabled,
@@ -531,7 +523,7 @@ fun SettingsScreen(
 
 @Composable
 private fun ToggleRow(
-    icon: ImageVector,
+    icon: String,
     title: String,
     subtitle: String,
     checked: Boolean,
@@ -543,8 +535,8 @@ private fun ToggleRow(
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp))
+        MaterialSymbol(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            size = 22.dp, weight = 500)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)

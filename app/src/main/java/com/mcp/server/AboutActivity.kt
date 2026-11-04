@@ -19,16 +19,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Gavel
-import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -42,6 +35,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.ui.theme.McpTheme
 
 class AboutActivity : ComponentActivity() {
@@ -64,7 +59,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 title = { Text("关于应用", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        MaterialSymbol(MaterialSymbols.ArrowBack, contentDescription = "返回")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -126,8 +121,8 @@ fun AboutScreen(onBack: () -> Unit) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            Icons.Default.Code,
+                        MaterialSymbol(
+                            MaterialSymbols.Code,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -159,11 +154,11 @@ fun AboutScreen(onBack: () -> Unit) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            Icons.Default.Gavel,
+                        MaterialSymbol(
+                            MaterialSymbols.Gavel,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp),
+                            size = 16.dp,
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(

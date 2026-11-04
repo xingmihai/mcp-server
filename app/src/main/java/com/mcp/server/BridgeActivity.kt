@@ -15,22 +15,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -53,6 +43,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.bridge.BridgeConfig
 import com.mcp.server.bridge.BridgeManager
 import com.mcp.server.server.McpAppCtx
@@ -123,12 +115,12 @@ fun BridgeScreen(onBack: () -> Unit = {}) {
                 title = { Text("MCP 桥接", fontWeight = FontWeight.SemiBold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        MaterialSymbol(MaterialSymbols.ArrowBack, contentDescription = "返回")
                     }
                 },
                 actions = {
                     IconButton(onClick = { doRefresh() }, enabled = !state.loading) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        MaterialSymbol(MaterialSymbols.Refresh, contentDescription = "刷新")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -143,7 +135,7 @@ fun BridgeScreen(onBack: () -> Unit = {}) {
                 BridgeManager.load(context) // 刷新前缀分配计数器，保证自动命名不重复
                 showEditDialog = true
             }) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                MaterialSymbol(MaterialSymbols.Add, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
                 Text("添加桥接")
             }
@@ -277,12 +269,12 @@ private fun BridgeCard(
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Link,
+                MaterialSymbol(
+                    MaterialSymbols.Link,
                     contentDescription = null,
                     tint = if (bridge.enabled) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.outline,
-                    modifier = Modifier.size(20.dp),
+                    size = 20.dp,
                 )
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -315,19 +307,19 @@ private fun BridgeCard(
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 FilledTonalButton(onClick = onManageTools, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                    MaterialSymbol(MaterialSymbols.Tune, contentDescription = null, size = 16.dp)
                     Spacer(Modifier.width(4.dp))
                     Text("管理工具")
                 }
                 Spacer(Modifier.width(8.dp))
                 FilledTonalButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    MaterialSymbol(MaterialSymbols.Edit, contentDescription = null, size = 16.dp)
                     Spacer(Modifier.width(4.dp))
                     Text("编辑")
                 }
                 Spacer(Modifier.width(8.dp))
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "删除",
+                    MaterialSymbol(MaterialSymbols.Delete, contentDescription = "删除",
                         tint = MaterialTheme.colorScheme.error)
                 }
             }

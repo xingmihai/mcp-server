@@ -27,18 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -62,8 +50,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -98,6 +84,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.server.LogEntry
 import com.mcp.server.server.LogStore
 import com.mcp.server.server.McpServerService
@@ -220,7 +208,7 @@ fun MainScreen(
                 Spacer(Modifier.height(8.dp))
                 NavigationDrawerItem(
                     label = { Text("工具列表") },
-                    icon = { Icon(Icons.Outlined.Tune, contentDescription = null) },
+                    icon = { MaterialSymbol(MaterialSymbols.Tune, contentDescription = null) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -230,7 +218,7 @@ fun MainScreen(
                 )
                 NavigationDrawerItem(
                     label = { Text("设置") },
-                    icon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
+                    icon = { MaterialSymbol(MaterialSymbols.Settings, contentDescription = null) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -240,7 +228,7 @@ fun MainScreen(
                 )
                 NavigationDrawerItem(
                     label = { Text("MCP 桥接") },
-                    icon = { Icon(Icons.Outlined.Link, contentDescription = null) },
+                    icon = { MaterialSymbol(MaterialSymbols.Link, contentDescription = null) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -250,7 +238,7 @@ fun MainScreen(
                 )
                 NavigationDrawerItem(
                     label = { Text("关于应用") },
-                    icon = { Icon(Icons.Default.Info, contentDescription = null) },
+                    icon = { MaterialSymbol(MaterialSymbols.Info, contentDescription = null) },
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
@@ -276,7 +264,7 @@ fun MainScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "菜单")
+                            MaterialSymbol(MaterialSymbols.Menu, contentDescription = "菜单")
                         }
                     },
                     actions = {
@@ -318,7 +306,8 @@ fun MainScreen(
                     ShortNavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
-                        icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                        icon = { MaterialSymbol(MaterialSymbols.Home, contentDescription = null,
+                            filled = selectedTab == 0) },
                         label = { Text("主页") },
                     )
                     ShortNavigationBarItem(
@@ -331,7 +320,8 @@ fun MainScreen(
                                         Badge { Text(logs.size.coerceAtMost(99).toString()) }
                                     }
                                 },
-                            ) { Icon(Icons.Default.Info, contentDescription = null) }
+                            ) { MaterialSymbol(MaterialSymbols.Info, contentDescription = null,
+                                filled = selectedTab == 1) }
                         },
                         label = { Text("日志") },
                     )
@@ -342,15 +332,15 @@ fun MainScreen(
                     // 浮动工具栏：收拢三个高频入口
                     HorizontalFloatingToolbar(expanded = true) {
                         IconButton(onClick = onOpenTools) {
-                            Icon(Icons.Outlined.Tune, contentDescription = "工具列表")
+                            MaterialSymbol(MaterialSymbols.Tune, contentDescription = "工具列表")
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Outlined.Settings, contentDescription = "设置")
+                            MaterialSymbol(MaterialSymbols.Settings, contentDescription = "设置")
                         }
                         IconButton(onClick = {
                             context.startActivity(Intent(context, BridgeActivity::class.java))
                         }) {
-                            Icon(Icons.Outlined.Link, contentDescription = "MCP 桥接")
+                            MaterialSymbol(MaterialSymbols.Link, contentDescription = "MCP 桥接")
                         }
                     }
                 }
@@ -599,10 +589,11 @@ private fun HomeTab(
                         else MaterialTheme.colorScheme.primary,
                     ),
                 ) {
-                    Icon(
-                        if (status.running) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    MaterialSymbol(
+                        if (status.running) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp),
+                        filled = true,
+                        size = 18.dp,
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(if (status.running) "停止" else "启动")
@@ -616,9 +607,9 @@ private fun HomeTab(
                     .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.Dns, contentDescription = null,
+                MaterialSymbol(MaterialSymbols.Dns, contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    modifier = Modifier.size(18.dp))
+                    size = 18.dp)
                 Spacer(Modifier.width(8.dp))
                 Text(
                     "端口 $currentPort",
@@ -635,15 +626,15 @@ private fun HomeTab(
                     val ip = status.ips.firstOrNull() ?: "192.168.x.x"
                     val url = "http://$ip:$currentPort/mcp"
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Dns, contentDescription = null,
+                        MaterialSymbol(MaterialSymbols.Dns, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(8.dp))
                         Text("连接地址", style = MaterialTheme.typography.titleSmall,
                             modifier = Modifier.weight(1f))
                         // 一键复制最常用的局域网地址
                         TextButton(onClick = { copyAddress(context, "局域网 MCP 端点", url) }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = null,
-                                modifier = Modifier.size(16.dp))
+                            MaterialSymbol(MaterialSymbols.ContentCopy, contentDescription = null,
+                                size = 16.dp)
                             Spacer(Modifier.width(6.dp))
                             Text("复制")
                         }
@@ -698,7 +689,7 @@ private fun HomeTab(
         Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Folder, contentDescription = null,
+                    MaterialSymbol(MaterialSymbols.Folder, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
                     Text("工作区", style = MaterialTheme.typography.titleSmall)
@@ -806,11 +797,11 @@ private fun ConnectionRow(label: String, value: String, onCopy: () -> Unit) {
         Spacer(Modifier.width(8.dp))
         // 明确的复制按钮：带水波纹、contentDescription 与无障碍提示
         IconButton(onClick = onCopy) {
-            Icon(
-                Icons.Default.ContentCopy,
+            MaterialSymbol(
+                MaterialSymbols.ContentCopy,
                 contentDescription = "复制$label",
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
+                size = 20.dp,
             )
         }
     }
