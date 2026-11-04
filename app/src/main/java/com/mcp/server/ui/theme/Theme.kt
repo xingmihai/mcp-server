@@ -35,10 +35,15 @@ private val ExpressiveShapes = Shapes(
 )
 
 /**
- * 全局 M3 Expressive 主题。
+ * 全局 M3 主题。
+ *
+ * 形状 / 组件仍用 Expressive 体系（MaterialExpressiveTheme + 8 档圆角），
+ * 但 **motion scheme 统一为 standard**：MCP Server 是工具型产品，按 M3 规范
+ * standard「最小回弹、功能性」更贴切；expressive 的 overshoot 留给 hero 时刻。
+ * scheme 是主题级开关，调用点读的是 6 个 spring token，换 scheme 不用改动画代码。
  *
  * @param dynamicColor 是否启用 Material You 动态取色；传 null 时读取用户在设置页的开关。
- *   Android 12（API 31）以下自动回退到应用自带 expressive 配色。
+ *   Android 12（API 31）以下自动回退到应用自带配色。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -76,10 +81,10 @@ fun McpTheme(
         }
     }
 
-    // Expressive 主题：spring 动效 + expressive 形状 + 强调版排版
+    // standard motion scheme（ease into final values，无 overshoot）+ Expressive 形状
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = MotionScheme.standard(),
         shapes = ExpressiveShapes,
         content = content,
     )

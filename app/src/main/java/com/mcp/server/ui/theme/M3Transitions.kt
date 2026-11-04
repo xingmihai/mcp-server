@@ -7,8 +7,16 @@ import android.os.Build
 import com.mcp.server.R
 
 /**
- * M3 Shared Axis X（水平共享轴）转场：进入页从右侧滑入并淡入，退出页左移并淡出。
- * 用于「主页 → 设置 / 工具 / 桥接 / 关于」这一组同级页面跳转。
+ * 跨 Activity 的 Shared Axis X 转场：进入页从右侧滑入淡入，退出页左移淡出。
+ *
+ * ⚠️ 平台限制（如实标注）：这是 **系统窗口级补间动画**，不是 MotionScheme 的
+ * spring token。Compose 的 spring 只作用于进程内的组合，Activity 切换由系统
+ * WindowManager 执行，无法读取 MaterialTheme.motionScheme。
+ * 这里用 linear_out_slow_in 近似 standard scheme 的「ease into final values、
+ * 无 overshoot」手感；页内转场（AnimatedContent）才是真正走 spring token 的部分。
+ *
+ * 若要 100% 由 spring token 驱动，需把四个子页面收进单 Activity 的 Compose 导航图，
+ * 属于架构级改造，本轮未做。
  */
 fun Context.m3StartActivity(intent: Intent) {
     startActivity(intent)

@@ -99,6 +99,7 @@ import com.mcp.server.ui.theme.MaterialSymbol
 import com.mcp.server.ui.theme.m3DefaultEffectsSpec
 import com.mcp.server.ui.theme.m3DefaultSpatialSpec
 import com.mcp.server.ui.theme.m3FastEffectsSpec
+import com.mcp.server.ui.theme.m3FastSpatialSpec
 import com.mcp.server.ui.theme.m3StartActivity
 import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.server.LogEntry
@@ -361,24 +362,25 @@ fun MainScreen(
                 }
             },
         ) { padding ->
-            // transitionSpec 不是 Composable 作用域，先从主题取好规格再传入
-            val fastEffects = m3FastEffectsSpec<Float>()
+            // transitionSpec 不是 Composable 作用域，先从主题取好规格再传入。
+            // 整页级动效用 default 档（原文：多数动效用 default，小元素才用 fast）
+            val defaultEffects = m3DefaultEffectsSpec<Float>()
             val defaultSpatial = m3DefaultSpatialSpec<IntOffset>()
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        (fadeIn(animationSpec = fastEffects) +
+                        (fadeIn(animationSpec = defaultEffects) +
                             slideInHorizontally(animationSpec = defaultSpatial) { it / 6 })
                             .togetherWith(
-                                fadeOut(animationSpec = fastEffects) +
+                                fadeOut(animationSpec = defaultEffects) +
                                     slideOutHorizontally(animationSpec = defaultSpatial) { -it / 6 }
                             )
                     } else {
-                        (fadeIn(animationSpec = fastEffects) +
+                        (fadeIn(animationSpec = defaultEffects) +
                             slideInHorizontally(animationSpec = defaultSpatial) { -it / 6 })
                             .togetherWith(
-                                fadeOut(animationSpec = fastEffects) +
+                                fadeOut(animationSpec = defaultEffects) +
                                     slideOutHorizontally(animationSpec = defaultSpatial) { it / 6 }
                             )
                     }
@@ -569,13 +571,15 @@ private fun HomeTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // ===== 状态卡片 =====
-        // M3 Motion：状态灯从主题 motionScheme 取 effects spec，不再手写 spring 参数
-        // 按压时按钮圆角做形状形变（shape morph）
+        // M3 Motion token 映射（scheme 由主题统一切到 standard）：
+        // - 按钮圆角 = spatial / fast（组件级；原文明确 spatial 管 rounded corners）
+        // - 状态灯 opacity = effects / fast（小元素；effects 不应 overshoot）
+        // 形状形变（shape morph）
         val buttonInteraction = remember { MutableInteractionSource() }
         val buttonPressed by buttonInteraction.collectIsPressedAsState()
         val buttonCorner by animateDpAsState(
             targetValue = if (buttonPressed) 16.dp else 28.dp,
-            animationSpec = m3DefaultSpatialSpec(),
+            animationSpec = m3FastSpatialSpec(),
             label = "buttonShapeMorph",
         )
         var pulseOn by remember { mutableStateOf(true) }
@@ -587,7 +591,7 @@ private fun HomeTab(
         }
         val pulseAlpha by animateFloatAsState(
             targetValue = if (status.running && pulseOn) 1f else if (status.running) 0.42f else 0.6f,
-            animationSpec = m3DefaultEffectsSpec<Float>(),
+            animationSpec = m3FastEffectsSpec<Float>(),
             label = "statusPulse",
         )
         Card(

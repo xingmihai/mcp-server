@@ -44,7 +44,7 @@ import androidx.lifecycle.viewmodel.*
 import androidx.savedstate.*
 import com.mcp.server.MainActivity
 import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3DefaultEffectsSpec
+import com.mcp.server.ui.theme.m3FastEffectsSpec
 import kotlinx.coroutines.delay
 
 /**
@@ -249,7 +249,7 @@ private fun FloatContent(
     }
     val dotAlpha by animateFloatAsState(
         targetValue = if (active && pulseOn) 1f else if (active) 0.42f else 0.6f,
-        animationSpec = m3DefaultEffectsSpec<Float>(),
+        animationSpec = m3FastEffectsSpec<Float>(),
         label = "floatDotPulse",
     )
 
