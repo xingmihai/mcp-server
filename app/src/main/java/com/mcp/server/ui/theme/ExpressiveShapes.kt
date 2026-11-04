@@ -106,6 +106,7 @@ object McpShapeTokens {
  * `toPath(morph, progress)` 会给出归一化的 Path；这里再按目标尺寸缩放平移，
  * 生成 `Outline.Generic`，因此可以直接用在 `Modifier.clip` / `background(shape=...)`。
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 class MorphShape(
     private val start: RoundedPolygon,
     private val end: RoundedPolygon,
