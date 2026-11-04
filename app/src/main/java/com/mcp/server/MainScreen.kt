@@ -521,21 +521,29 @@ private fun HomeTab(
         if (status.running) {
             Card {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    val ip = status.ips.firstOrNull() ?: "192.168.x.x"
+                    val url = "http://$ip:$currentPort/mcp"
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Dns, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(8.dp))
-                        Text("连接地址", style = MaterialTheme.typography.titleSmall)
+                        Text("连接地址", style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.weight(1f))
+                        // 一键复制最常用的局域网地址
+                        TextButton(onClick = { copyAddress(context, "局域网 MCP 端点", url) }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = null,
+                                modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("复制")
+                        }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    val ip = status.ips.firstOrNull() ?: "192.168.x.x"
-                    val url = "http://$ip:$currentPort/mcp"
+                    Spacer(Modifier.height(6.dp))
                     ConnectionRow(label = "局域网 MCP 端点", value = url) {
-                        copyText(context, url)
+                        copyAddress(context, "局域网 MCP 端点", url)
                     }
                     val localUrl = "http://127.0.0.1:$currentPort/mcp"
                     ConnectionRow(label = "手机本机 MCP", value = localUrl) {
-                        copyText(context, localUrl)
+                        copyAddress(context, "手机本机 MCP", localUrl)
                     }
                     // 内网穿透公网地址（状态每秒轮询刷新）
                     val tunnelUrl = status.tunnelUrl
@@ -543,7 +551,7 @@ private fun HomeTab(
                     if (tunnelActive) {
                         if (tunnelUrl != null) {
                             ConnectionRow(label = "公网 MCP 端点", value = tunnelUrl) {
-                                copyText(context, tunnelUrl)
+                                copyAddress(context, "公网 MCP 端点", tunnelUrl)
                             }
                             Text(
                                 "隧道已连接",
@@ -663,15 +671,9 @@ private fun ConnectionRow(label: String, value: String, onCopy: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Default.ContentCopy, contentDescription = "复制",
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable(onClick = onCopy))
-        Spacer(Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -683,7 +685,23 @@ private fun ConnectionRow(label: String, value: String, onCopy: () -> Unit) {
                 maxLines = 2,
             )
         }
+        Spacer(Modifier.width(8.dp))
+        // 明确的复制按钮：带水波纹、contentDescription 与无障碍提示
+        IconButton(onClick = onCopy) {
+            Icon(
+                Icons.Default.ContentCopy,
+                contentDescription = "复制$label",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
+}
+
+/** 复制连接地址并给出提示，避免点了没反应 */
+private fun copyAddress(context: Context, label: String, value: String) {
+    copyText(context, value)
+    android.widget.Toast.makeText(context, "已复制：$label", android.widget.Toast.LENGTH_SHORT).show()
 }
 
 private fun copyText(context: Context, text: String) {
