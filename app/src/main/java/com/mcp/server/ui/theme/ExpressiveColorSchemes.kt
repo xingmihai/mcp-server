@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.Color
  * - surface / surfaceContainer* 带轻微紫调，而不是中性灰
  * - 深色的角色色提到高明度低饱和，容器压到带紫调的深色
  *
- * 对比度：全部 on*/container 配对已按 WCAG 计算，正文 4.5:1 全部达标
+ * 对比度：全部 on 角色与 Container 配对已按 WCAG 计算，正文 4.5:1 全部达标
  * （最低的一组也有 5.48:1）。主要配对实测值见 `配色对比度.md`。
  *
  * 动态取色开启时仍由 dynamicLightColorScheme / dynamicDarkColorScheme 覆盖，
