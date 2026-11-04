@@ -7,10 +7,11 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.luminance
@@ -35,12 +36,35 @@ private val ExpressiveShapes = Shapes(
 )
 
 /**
- * 全局 M3 主题。
+ * 强调排版：M3 Expressive 的 Typography 除了 15 个基线角色，
+ * 还为每个角色提供 `*Emphasized` 变体（更重、更紧的字重与字距）。
+ * 这里把标题类角色换成强调变体，正文/标签仍用基线。
+ */
+private val ExpressiveTypography: Typography
+    @Composable
+    get() {
+        val base = Typography()
+        return Typography(
+            displayLarge = base.displayLargeEmphasized,
+            displayMedium = base.displayMediumEmphasized,
+            displaySmall = base.displaySmallEmphasized,
+            headlineLarge = base.headlineLargeEmphasized,
+            headlineMedium = base.headlineMediumEmphasized,
+            headlineSmall = base.headlineSmallEmphasized,
+            titleLarge = base.titleLargeEmphasized,
+            titleMedium = base.titleMediumEmphasized,
+            titleSmall = base.titleSmallEmphasized,
+        )
+    }
+
+/**
+ * 全局 M3 Expressive 主题。
  *
- * 形状 / 组件仍用 Expressive 体系（MaterialExpressiveTheme + 8 档圆角），
- * 但 **motion scheme 统一为 standard**：MCP Server 是工具型产品，按 M3 规范
- * standard「最小回弹、功能性」更贴切；expressive 的 overshoot 留给 hero 时刻。
- * scheme 是主题级开关，调用点读的是 6 个 spring token，换 scheme 不用改动画代码。
+ * - motionScheme = expressive()：按 M3 首页的 Expressive 方向，带 overshoot 的 spring
+ * - 配色：动态取色优先；非动态时用 expressiveLightColorScheme()（更鲜明的色角色搭配）。
+ *   material3 1.5.0-beta02 只提供 expressiveLightColorScheme，深色仍用 darkColorScheme()
+ * - 排版：标题类角色用 *Emphasized 强调变体
+ * - 形状：8 档 Expressive 圆角
  *
  * @param dynamicColor 是否启用 Material You 动态取色；传 null 时读取用户在设置页的开关。
  *   Android 12（API 31）以下自动回退到应用自带配色。
@@ -60,7 +84,7 @@ fun McpTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> darkColorScheme()
-        else -> lightColorScheme()
+        else -> expressiveLightColorScheme()
     }
 
     // 统一设置状态栏 / 导航栏颜色与图标明暗，兼容深色模式
@@ -81,11 +105,11 @@ fun McpTheme(
         }
     }
 
-    // standard motion scheme（ease into final values，无 overshoot）+ Expressive 形状
     MaterialExpressiveTheme(
         colorScheme = colorScheme,
-        motionScheme = MotionScheme.standard(),
+        motionScheme = MotionScheme.expressive(),
         shapes = ExpressiveShapes,
+        typography = ExpressiveTypography,
         content = content,
     )
 }

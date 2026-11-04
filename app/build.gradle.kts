@@ -24,6 +24,8 @@ val appVersionName = project.findProperty("appVersionName")?.toString()?.takeIf 
 
 android {
     namespace = "com.mcp.server"
+    // SDK 37 基线：aapt 会据此在合并清单写入 compileSdkVersion=37 /
+    // platformBuildVersionCode=37，构建脚本里有 aapt dump badging 的硬断言校验
     compileSdk = 37
 
     defaultConfig {

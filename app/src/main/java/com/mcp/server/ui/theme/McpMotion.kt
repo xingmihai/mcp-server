@@ -19,8 +19,8 @@ import androidx.compose.runtime.Composable
  * - spatial：位移 / 旋转 / 尺寸 / 圆角（rounded corners）
  * - effects：颜色 / opacity（不应有 overshoot）
  *
- * 全局 scheme 由 [McpTheme] 统一设为 MotionScheme.standard()；这里只负责读 token，
- * 不硬编码 stiffness / damping / duration。
+ * 全局 scheme 由 [McpTheme] 统一设为 MotionScheme.expressive()（按 M3 首页的
+ * Expressive 方向，带 overshoot）；这里只负责读 token，不硬编码 stiffness / damping / duration。
  */
 object McpMotionTokens {
     const val FAST_SPATIAL = "md.sys.motion.spring.fast.spatial"
@@ -67,8 +67,8 @@ fun <T> m3SlowEffectsSpec(): FiniteAnimationSpec<T> =
  * 自定义 MotionScheme（原文：scheme 不够用时可以自己创建，且仍能享受主题化）。
  *
  * 用 spring 的三属性（stiffness / damping / initial velocity）参数化 6 个 token；
- * 默认 dampingRatio = 1f，即完全移除回弹，贴近 standard 的功能性手感。
- * 当前全局仍用内置 [MotionScheme.standard]，此工厂供将来某个 hero 元素做进阶定制。
+ * 默认 dampingRatio = 1f（无回弹）；若要做 hero 时刻可传 0.8f 之类带回弹的值。
+ * 当前全局用内置 [MotionScheme.expressive]，此工厂供局部元素做进阶定制。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 fun mcpMotionScheme(
@@ -104,7 +104,7 @@ fun mcpMotionScheme(
  *
  * 通过嵌套 [MaterialExpressiveTheme] 覆盖 motionScheme，显式回填当前配色/形状/排版，
  * 等价于 override 该 CompositionLocal，但不依赖内部类名。
- * 本项目按「整体 standard」决策，默认不在任何页面调用它；保留能力备用。
+ * 本项目全局用 expressive，默认不在任何页面局部切换；保留能力备用。
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

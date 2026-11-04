@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- M3 Shared Axis X: 退出页左移 25% 并淡出 -->
 <set xmlns:android="http://schemas.android.com/apk/res/android"
-    android:interpolator="@android:interpolator/linear_out_slow_in"
+    android:interpolator="@android:interpolator/fast_out_slow_in"
     android:shareInterpolator="true">
     <translate
         android:fromXDelta="0%"

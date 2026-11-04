@@ -51,6 +51,15 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingToolbarDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.SplitButtonDefaults
+import androidx.compose.material3.SplitButtonLayout
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -85,7 +94,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -96,6 +108,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.mcp.server.ui.theme.MaterialSymbol
+import com.mcp.server.ui.theme.McpShapeTokens
+import com.mcp.server.ui.theme.rememberMorphShape
 import com.mcp.server.ui.theme.m3DefaultEffectsSpec
 import com.mcp.server.ui.theme.m3DefaultSpatialSpec
 import com.mcp.server.ui.theme.m3FastEffectsSpec
@@ -285,28 +299,49 @@ fun MainScreen(
                     },
                     actions = {
                         if (selectedTab == 1 && logs.isNotEmpty()) {
-                            // M3 Expressive：content 是 ButtonGroupScope builder（非 Composable），
-                            // 用 clickableItem 声明按钮；两个按钮不会溢出，overflowIndicator 占位即可
+                            // 首页点名能力：shape-shifting ButtonGroup
+                            // customItem + connected shapes + animateWidth：按压时按钮互相挤压，
+                            // 圆角按 pressedShape 形变，而不是普通的一排按钮
+                            val copyInteraction = remember { MutableInteractionSource() }
+                            val clearInteraction = remember { MutableInteractionSource() }
                             ButtonGroup(
-                                overflowIndicator = { _ -> },
+                                overflowIndicator = { menuState ->
+                                    ButtonGroupDefaults.OverflowIndicator(menuState = menuState)
+                                },
                                 modifier = Modifier.padding(end = 8.dp),
                             ) {
-                                clickableItem(
-                                    onClick = {
-                                        val text = logs.joinToString("\n") {
-                                            "${it.timeText} [${it.level}] ${it.message}"
-                                        }
-                                        copyText(context, text)
-                                        scope.launch { snackbarHostState.showSnackbar("已复制全部日志") }
+                                customItem(
+                                    buttonGroupContent = {
+                                        ToggleButton(
+                                            checked = false,
+                                            onCheckedChange = {
+                                                val text = logs.joinToString("\n") {
+                                                    "${it.timeText} [${it.level}] ${it.message}"
+                                                }
+                                                copyText(context, text)
+                                                scope.launch { snackbarHostState.showSnackbar("已复制全部日志") }
+                                            },
+                                            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                            modifier = Modifier.animateWidth(copyInteraction),
+                                            interactionSource = copyInteraction,
+                                        ) { Text("复制") }
                                     },
-                                    label = "复制",
+                                    menuContent = { },
                                 )
-                                clickableItem(
-                                    onClick = {
-                                        onClearLogs()
-                                        scope.launch { snackbarHostState.showSnackbar("日志已清空") }
+                                customItem(
+                                    buttonGroupContent = {
+                                        ToggleButton(
+                                            checked = false,
+                                            onCheckedChange = {
+                                                onClearLogs()
+                                                scope.launch { snackbarHostState.showSnackbar("日志已清空") }
+                                            },
+                                            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                            modifier = Modifier.animateWidth(clearInteraction),
+                                            interactionSource = clearInteraction,
+                                        ) { Text("清空") }
                                     },
-                                    label = "清空",
+                                    menuContent = { },
                                 )
                             }
                         }
@@ -345,8 +380,22 @@ fun MainScreen(
             },
             floatingActionButton = {
                 if (selectedTab == 0) {
-                    // 浮动工具栏：收拢三个高频入口
-                    HorizontalFloatingToolbar(expanded = true) {
+                    // 首页点名能力：Toolbar 配 FAB（vibrant 配色 + Vibrant FAB）
+                    HorizontalFloatingToolbar(
+                        expanded = true,
+                        floatingActionButton = {
+                            FloatingToolbarDefaults.VibrantFloatingActionButton(
+                                onClick = if (status.running) onStopServer else onStartServer,
+                            ) {
+                                MaterialSymbol(
+                                    if (status.running) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
+                                    contentDescription = if (status.running) "停止服务器" else "启动服务器",
+                                    filled = true,
+                                )
+                            }
+                        },
+                        colors = FloatingToolbarDefaults.vibrantFloatingToolbarColors(),
+                    ) {
                         IconButton(onClick = onOpenTools) {
                             MaterialSymbol(MaterialSymbols.Tune, contentDescription = "工具列表")
                         }
@@ -571,7 +620,7 @@ private fun HomeTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // ===== 状态卡片 =====
-        // M3 Motion token 映射（scheme 由主题统一切到 standard）：
+        // M3 Motion token 映射（scheme 由主题统一设为 expressive）：
         // - 按钮圆角 = spatial / fast（组件级；原文明确 spatial 管 rounded corners）
         // - 状态灯 opacity = effects / fast（小元素；effects 不应 overshoot）
         // 形状形变（shape morph）
@@ -594,8 +643,15 @@ private fun HomeTab(
             animationSpec = m3FastEffectsSpec<Float>(),
             label = "statusPulse",
         )
+        // 37 个形状令牌中的 Cookie4Sided ↔ Sunny 形变（M3 shape morph motion）
+        val statusShape = rememberMorphShape(
+            start = MaterialShapes.Cookie4Sided,
+            end = MaterialShapes.Sunny,
+            targetProgress = if (status.running) 1f else 0f,
+            label = "statusShapeMorph",
+        )
         Card(
-            shape = MaterialTheme.shapes.largeIncreased,
+            shape = RoundedCornerShape(buttonCorner),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             ),
@@ -608,19 +664,18 @@ private fun HomeTab(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(22.dp)
                         .background(
                             color = (if (status.running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
                                 .copy(alpha = pulseAlpha),
-                            shape = CircleShape,
+                            shape = statusShape,
                         ),
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         if (status.running) "服务器运行中" else "服务器未运行",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                     )
                     if (status.running) {
                         Text(
@@ -630,24 +685,49 @@ private fun HomeTab(
                         )
                     }
                 }
-                Button(
-                    onClick = if (status.running) onStopServer else onStartServer,
-                    shape = RoundedCornerShape(buttonCorner),
-                    interactionSource = buttonInteraction,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (status.running) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary,
-                    ),
-                ) {
-                    MaterialSymbol(
-                        if (status.running) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
-                        contentDescription = null,
-                        filled = true,
-                        size = 18.dp,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (status.running) "停止" else "启动")
-                }
+                // 首页点名能力：Split button —— 主按钮 + 关联动作菜单（连通形状 + 按压形变）
+                var showMainMenu by remember { mutableStateOf(false) }
+                SplitButtonLayout(
+                    leadingContent = {
+                        SplitButtonDefaults.LeadingButton(
+                            onClick = if (status.running) onStopServer else onStartServer,
+                            interactionSource = buttonInteraction,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (status.running) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.primary,
+                            ),
+                        ) {
+                            MaterialSymbol(
+                                if (status.running) MaterialSymbols.Stop else MaterialSymbols.PlayArrow,
+                                contentDescription = null,
+                                filled = true,
+                                size = 18.dp,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(if (status.running) "停止" else "启动")
+                        }
+                    },
+                    trailingContent = {
+                        Box {
+                            SplitButtonDefaults.TrailingButton(onClick = { showMainMenu = true }) {
+                                MaterialSymbol(MaterialSymbols.Tune, contentDescription = "更多操作", size = 20.dp)
+                            }
+                            DropdownMenu(
+                                expanded = showMainMenu,
+                                onDismissRequest = { showMainMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("编辑端口") },
+                                    onClick = { showMainMenu = false; onEditPort() },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("选择工作区") },
+                                    onClick = { showMainMenu = false; onPickWorkspace() },
+                                )
+                            }
+                        }
+                    },
+                )
             }
             // 端口编辑行（点击整行弹出修改弹窗）
             Row(
@@ -680,7 +760,7 @@ private fun HomeTab(
                         MaterialSymbol(MaterialSymbols.Dns, contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(8.dp))
-                        Text("连接地址", style = MaterialTheme.typography.titleSmall,
+                        Text("连接地址", style = MaterialTheme.typography.titleSmallEmphasized,
                             modifier = Modifier.weight(1f))
                         // 一键复制最常用的局域网地址
                         TextButton(onClick = { copyAddress(context, "局域网 MCP 端点", url) }) {
@@ -712,16 +792,43 @@ private fun HomeTab(
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                LoadingIndicator(
-                                    modifier = Modifier.size(16.dp),
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // LoadingIndicator：用 37 形状令牌里的多边形做形变序列
+                                    LoadingIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        polygons = listOf(
+                                            MaterialShapes.Sunny,
+                                            MaterialShapes.Cookie4Sided,
+                                            MaterialShapes.Puffy,
+                                        ),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "隧道连接中",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                    )
+                                }
+                                // 首页点名能力：可定制波形与粗细的 WavyProgressIndicator
+                                val density = LocalDensity.current
+                                LinearWavyProgressIndicator(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(10.dp),
                                     color = MaterialTheme.colorScheme.tertiary,
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    "隧道连接中",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.tertiary,
+                                    trackColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                    stroke = Stroke(
+                                        width = with(density) { 5.dp.toPx() },
+                                        cap = StrokeCap.Round,
+                                    ),
+                                    trackStroke = Stroke(
+                                        width = with(density) { 2.dp.toPx() },
+                                        cap = StrokeCap.Round,
+                                    ),
+                                    wavelength = 18.dp,
+                                    amplitude = 0.7f,
                                 )
                             }
                         }
@@ -743,7 +850,7 @@ private fun HomeTab(
                     MaterialSymbol(MaterialSymbols.Folder, contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text("工作区", style = MaterialTheme.typography.titleSmall)
+                    Text("工作区", style = MaterialTheme.typography.titleSmallEmphasized)
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
@@ -767,6 +874,12 @@ private fun HomeTab(
             }
         }
 
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "M3 Expressive · ${McpShapeTokens.OFFICIAL_COUNT} 个官方形状 + ${McpShapeTokens.CUSTOM_COUNT} 个形变令牌 = ${McpShapeTokens.TOTAL_COUNT} 个形状令牌",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         Spacer(Modifier.height(16.dp))
     }
 }

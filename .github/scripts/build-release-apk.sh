@@ -66,3 +66,20 @@ mkdir -p "$(dirname "$OUT_APK")"
   --out "$OUT_APK" "$ALIGNED"
 "$BT/apksigner" verify --verbose "$OUT_APK"
 echo "已生成：$OUT_APK"
+
+# 校验编译 SDK 基线：compileSdkVersion / platformBuildVersionCode 都必须是 37
+AAPT="$BT/aapt"
+BADGING=$("$AAPT" dump badging "$OUT_APK" 2>/dev/null || true)
+SDK_LINE=$(printf '%s\n' "$BADGING" | grep -E "platformBuildVersionCode|compileSdkVersion" || true)
+echo "SDK 基线：$SDK_LINE"
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+  printf '### SDK 基线\n```\n%s\n```\n' "$SDK_LINE" >> "$GITHUB_STEP_SUMMARY"
+fi
+printf '%s\n' "$BADGING" | grep -q "platformBuildVersionCode='37'" || {
+  echo "::error title=SDK 基线不符::platformBuildVersionCode 不是 37：$SDK_LINE"
+  exit 1
+}
+printf '%s\n' "$BADGING" | grep -q "compileSdkVersion='37'" || {
+  echo "::error title=SDK 基线不符::compileSdkVersion 不是 37：$SDK_LINE"
+  exit 1
+}

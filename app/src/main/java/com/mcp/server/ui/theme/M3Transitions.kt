@@ -12,8 +12,8 @@ import com.mcp.server.R
  * ⚠️ 平台限制（如实标注）：这是 **系统窗口级补间动画**，不是 MotionScheme 的
  * spring token。Compose 的 spring 只作用于进程内的组合，Activity 切换由系统
  * WindowManager 执行，无法读取 MaterialTheme.motionScheme。
- * 这里用 linear_out_slow_in 近似 standard scheme 的「ease into final values、
- * 无 overshoot」手感；页内转场（AnimatedContent）才是真正走 spring token 的部分。
+ * 这里用 fast_out_slow_in 近似 expressive scheme 的 ease-in-out 收尾手感；
+ * 页内转场（AnimatedContent）才是真正走 spring token 的部分。
  *
  * 若要 100% 由 spring token 驱动，需把四个子页面收进单 Activity 的 Compose 导航图，
  * 属于架构级改造，本轮未做。
