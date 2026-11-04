@@ -21,7 +21,9 @@ concurrency:
 
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    # 固定 24.04：ubuntu-latest 在 2026-10-19~11-19 渐进迁移到 Ubuntu 26.04，
+    # 避免同一天两次构建落到不同镜像；需要升级时改成 ubuntu-26.04 并验证工具链
+    runs-on: ubuntu-24.04
     # 签名材料来自 release 环境密钥（Environment secrets）
     environment: release
     env:
@@ -32,12 +34,12 @@ jobs:
 
     steps:
       - name: 检出代码（需完整历史与 tag）
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: 设置 JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'

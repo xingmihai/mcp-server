@@ -27,7 +27,7 @@ import com.mcp.server.R
 
 /**
  * 悬浮窗：开关开启后，只要应用在运行就持续显示。
- * 胶囊形状小窗，显示应用名 + 服务器运行状态（运行中/已停止），可拖动，点击回到主界面。
+ * 胶囊形状小窗，只显示状态呼吸灯 + 服务器运行状态（运行中/已停止），可拖动，点击回到主界面。
  * 作为前台服务运行（低优先级通知），避免 Android 8+ 后台启动限制，同时更不易被系统回收。
  * 需要 SYSTEM_ALERT_WINDOW 权限。
  */
@@ -55,6 +55,7 @@ class FloatWindowService : Service() {
 
     private var windowManager: WindowManager? = null
     private var floatView: View? = null
+    private var statusTv: TextView? = null
     private val handler = Handler(Looper.getMainLooper())
 
     private val updateRunnable = object : Runnable {
@@ -127,20 +128,14 @@ class FloatWindowService : Service() {
         try {
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
 
-            // 应用名
-            val nameTv = TextView(this).apply {
-                text = "MCP 服务器"
-                setTextColor(Color.WHITE)
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-            }
-            // 运行状态
+            // 运行状态（圆点 + 运行中/已停止）
             val statusTv = TextView(this).apply {
                 setTextColor(Color.parseColor("#C8E6C9"))
                 textSize = 11f
                 typeface = Typeface.DEFAULT_BOLD
                 isClickable = true
             }
+            this.statusTv = statusTv
             // 状态提示（无背景色，与胶囊主体融为一体）
             val statusBg = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -158,12 +153,8 @@ class FloatWindowService : Service() {
                     cornerRadius = dp(28).toFloat()
                     setColor(Color.parseColor("#CC3F51B5"))
                 }
-                addView(nameTv, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 addView(statusBg, LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    marginStart = dp(8)
-                })
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
 
             val type = if (Build.VERSION.SDK_INT >= 26) {
@@ -235,16 +226,11 @@ class FloatWindowService : Service() {
     }
 
     private fun updateText() {
-        val view = floatView ?: return
-        val srv = McpServerService.server
-        val active = srv?.isRunning == true
-        try {
-            val statusBg = (view as LinearLayout).getChildAt(1) as LinearLayout
-            val statusTv = statusBg.getChildAt(0) as TextView
-            statusTv.text = if (active) "● 运行中" else "● 已停止"
-            statusTv.setTextColor(if (active) Color.parseColor("#C8E6C9") else Color.parseColor("#FFCDD2"))
-        } catch (_: Exception) {
-        }
+        val tv = statusTv ?: return
+        val active = McpServerService.server?.isRunning == true
+        // 圆点随状态变色：运行中绿色、已停止红色
+        tv.text = if (active) "● 运行中" else "● 已停止"
+        tv.setTextColor(if (active) Color.parseColor("#C8E6C9") else Color.parseColor("#FFCDD2"))
     }
 
     private fun dp(v: Int): Int =
@@ -258,6 +244,7 @@ class FloatWindowService : Service() {
         } catch (_: Exception) {
         }
         floatView = null
+        statusTv = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
