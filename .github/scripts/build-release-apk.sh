@@ -30,8 +30,21 @@ keytool -list -keystore "$KS" -storepass:file "$KS_PASS" -alias "$KEY_ALIAS" > /
 printf 'sdk.dir=%s\n' "$SDK" > local.properties
 chmod +x gradlew
 # GRADLE_ARGS 由工作流传入，如 -PappVersionCode=123 -PappVersionName=1.2.4-pre.7
+# 失败时把关键错误写成一条 workflow annotation，方便从 API 快速定位
+LOG="$RUNNER_TEMP/gradle-build.log"
+set +e
 # shellcheck disable=SC2086
-./gradlew assembleRelease --no-daemon --stacktrace ${GRADLE_ARGS:-}
+./gradlew assembleRelease --no-daemon --stacktrace ${GRADLE_ARGS:-} > "$LOG" 2>&1
+RC=$?
+set -e
+cat "$LOG"
+if [ "$RC" -ne 0 ]; then
+  SUMMARY=$(grep -E '^(e:|FAILURE:|> |\* |Caused by:|Could not|Execution failed|Requires|Dependency|Error)' "$LOG" \
+    | tail -25 | sed 's/%/%25/g; s/\r/%0D/g' \
+    | awk 'BEGIN{s=""} {printf "%s%s", s, $0; s="%0A"} END{print ""}')
+  echo "::error title=Gradle 构建失败::${SUMMARY:-请查看构建日志}"
+  exit "$RC"
+fi
 
 BT=$(find "$SDK/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
 test -n "$BT"
