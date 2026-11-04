@@ -60,6 +60,8 @@ import com.mcp.server.tools.RootHelper
 import com.mcp.server.tools.Settings2
 import com.mcp.server.tools.ShizukuHelper
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3Finish
+import com.mcp.server.ui.theme.m3SetupExpressiveBack
 
 class SettingsActivity : ComponentActivity() {
 
@@ -91,10 +93,11 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        m3SetupExpressiveBack()
         setContent {
             McpTheme {
                 SettingsScreen(
-                    onBack = { finish() },
+                    onBack = { m3Finish() },
                     permissionTick = permissionTick.intValue,
                     onRequestOverlay = {
                         if (!AndroidSettings.canDrawOverlays(this)) {

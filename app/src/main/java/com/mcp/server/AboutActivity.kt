@@ -39,13 +39,16 @@ import androidx.compose.ui.unit.dp
 import com.mcp.server.ui.theme.MaterialSymbol
 import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3Finish
+import com.mcp.server.ui.theme.m3SetupExpressiveBack
 
 class AboutActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        m3SetupExpressiveBack()
         setContent {
             McpTheme {
-                AboutScreen(onBack = { finish() })
+                AboutScreen(onBack = { m3Finish() })
             }
         }
     }

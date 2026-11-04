@@ -8,10 +8,8 @@ import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.luminance
@@ -61,8 +59,8 @@ private val ExpressiveTypography: Typography
  * 全局 M3 Expressive 主题。
  *
  * - motionScheme = expressive()：按 M3 首页的 Expressive 方向，带 overshoot 的 spring
- * - 配色：动态取色优先；非动态时用 expressiveLightColorScheme()（更鲜明的色角色搭配）。
- *   material3 1.5.0-beta02 只提供 expressiveLightColorScheme，深色仍用 darkColorScheme()
+ * - 配色：动态取色优先；关闭时走 [ExpressiveColorSchemes] 自建的深浅两套，
+ *   两者色相对称、都是 Expressive，不再出现「浅色 Expressive / 深色基线」的割裂
  * - 排版：标题类角色用 *Emphasized 强调变体
  * - 形状：8 档 Expressive 圆角
  *
@@ -83,8 +81,8 @@ fun McpTheme(
         useDynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> darkColorScheme()
-        else -> expressiveLightColorScheme()
+        darkTheme -> ExpressiveColorSchemes.Dark
+        else -> ExpressiveColorSchemes.Light
     }
 
     // 统一设置状态栏 / 导航栏颜色与图标明暗，兼容深色模式

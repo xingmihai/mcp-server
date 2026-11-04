@@ -44,6 +44,8 @@ import com.mcp.server.bridge.BridgeToolInfo
 import com.mcp.server.server.McpAppCtx
 import com.mcp.server.tools.ToolKit
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3Finish
+import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,13 +57,14 @@ import kotlinx.coroutines.withContext
 class BridgeToolsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        m3SetupExpressiveBack()
         val bridgeId = intent.getStringExtra("bridgeId") ?: run {
-            finish()
+            m3Finish()
             return
         }
         setContent {
             McpTheme {
-                BridgeToolsScreen(bridgeId = bridgeId, onBack = { finish() })
+                BridgeToolsScreen(bridgeId = bridgeId, onBack = { m3Finish() })
             }
         }
     }

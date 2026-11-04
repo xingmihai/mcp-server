@@ -51,6 +51,9 @@ import com.mcp.server.bridge.BridgeManager
 import com.mcp.server.server.McpAppCtx
 import com.mcp.server.tools.ToolKit
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3Finish
+import com.mcp.server.ui.theme.m3StartActivity
+import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,9 +61,10 @@ import kotlinx.coroutines.withContext
 class BridgeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        m3SetupExpressiveBack()
         setContent {
             McpTheme {
-                BridgeScreen(onBack = { finish() })
+                BridgeScreen(onBack = { m3Finish() })
             }
         }
     }
@@ -190,7 +194,7 @@ fun BridgeScreen(onBack: () -> Unit = {}) {
                         onManageTools = {
                             val intent = android.content.Intent(context, BridgeToolsActivity::class.java)
                                 .putExtra("bridgeId", bridge.id)
-                            context.startActivity(intent)
+                            context.m3StartActivity(intent)
                         },
                     )
                 }

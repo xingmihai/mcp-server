@@ -42,15 +42,18 @@ import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.tools.ToolDefinition
 import com.mcp.server.tools.ToolKit
 import com.mcp.server.ui.theme.McpTheme
+import com.mcp.server.ui.theme.m3Finish
+import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import org.json.JSONArray
 import org.json.JSONObject
 
 class ToolsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        m3SetupExpressiveBack()
         setContent {
             McpTheme {
-                ToolsScreen(onBack = { finish() })
+                ToolsScreen(onBack = { m3Finish() })
             }
         }
     }
