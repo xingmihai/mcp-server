@@ -66,6 +66,8 @@ dependencies {
     // 显式覆盖 BOM 的 material3 1.4.0：M3 Expressive 全套组件在 1.5.0 线
     implementation("androidx.compose.material3:material3:1.5.0-beta02")
     implementation("androidx.activity:activity-compose:1.9.1")
+    // 单 Activity 导航：跨页转场走 MotionScheme 的 spring token
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

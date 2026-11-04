@@ -1,8 +1,5 @@
 package com.mcp.server
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,32 +40,10 @@ import com.mcp.server.bridge.BridgeManager
 import com.mcp.server.bridge.BridgeToolInfo
 import com.mcp.server.server.McpAppCtx
 import com.mcp.server.tools.ToolKit
-import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3Finish
-import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/**
- * 单个桥接服务的工具管理页：
- * 显示该桥接的所有工具，可单独控制每个工具的开关。
- */
-class BridgeToolsActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        m3SetupExpressiveBack()
-        val bridgeId = intent.getStringExtra("bridgeId") ?: run {
-            m3Finish()
-            return
-        }
-        setContent {
-            McpTheme {
-                BridgeToolsScreen(bridgeId = bridgeId, onBack = { m3Finish() })
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

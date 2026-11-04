@@ -114,7 +114,6 @@ import com.mcp.server.ui.theme.m3DefaultEffectsSpec
 import com.mcp.server.ui.theme.m3DefaultSpatialSpec
 import com.mcp.server.ui.theme.m3FastEffectsSpec
 import com.mcp.server.ui.theme.m3FastSpatialSpec
-import com.mcp.server.ui.theme.m3StartActivity
 import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.server.LogEntry
 import com.mcp.server.server.LogStore
@@ -141,6 +140,7 @@ fun MainScreen(
     onOpenTools: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenBridge: () -> Unit = {},
     onClearLogs: () -> Unit = {},
     showStorageDialog: Boolean = false,
     onStorageDialogDismiss: () -> Unit = {},
@@ -262,7 +262,7 @@ fun MainScreen(
                     selected = false,
                     onClick = {
                         scope.launch { drawerState.close() }
-                        context.m3StartActivity(Intent(context, BridgeActivity::class.java))
+                        onOpenBridge()
                     },
                     modifier = Modifier.padding(horizontal = 12.dp),
                 )
@@ -403,7 +403,7 @@ fun MainScreen(
                             MaterialSymbol(MaterialSymbols.Settings, contentDescription = "设置")
                         }
                         IconButton(onClick = {
-                            context.m3StartActivity(Intent(context, BridgeActivity::class.java))
+                            onOpenBridge()
                         }) {
                             MaterialSymbol(MaterialSymbols.Link, contentDescription = "MCP 桥接")
                         }

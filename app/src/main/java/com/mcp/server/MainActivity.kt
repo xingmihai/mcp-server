@@ -10,11 +10,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import com.mcp.server.server.LogStore
 import com.mcp.server.server.McpServerService
 import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3StartActivity
-import com.mcp.server.server.LogStore
 
+/**
+ * 唯一的 Activity。原先的 Tools / Settings / About / Bridge / BridgeTools
+ * 已收进 [AppNavHost] 的 Compose 导航图，跨页转场因此能走 MotionScheme 的 spring token。
+ *
+ * 保留 singleTask：通知 PendingIntent、悬浮窗点击、BOOT 后服务通知都指向这里，
+ * singleTask 保证不会叠出多个主页实例。
+ */
 class MainActivity : ComponentActivity() {
 
     private val permissionLauncher = registerForActivityResult(
@@ -49,12 +55,9 @@ class MainActivity : ComponentActivity() {
         val needStorage = firstRun && noWorkspace
         setContent {
             McpTheme {
-                MainScreen(
+                AppNavHost(
                     onStartServer = { startServer() },
                     onStopServer = { stopServer() },
-                    onOpenTools = { m3StartActivity(Intent(this, ToolsActivity::class.java)) },
-                    onOpenSettings = { m3StartActivity(Intent(this, SettingsActivity::class.java)) },
-                    onOpenAbout = { m3StartActivity(Intent(this, AboutActivity::class.java)) },
                     onClearLogs = { LogStore.clear() },
                     showStorageDialog = firstRun && needStorage,
                     onStorageDialogDismiss = {

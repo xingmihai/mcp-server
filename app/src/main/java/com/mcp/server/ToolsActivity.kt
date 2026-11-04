@@ -1,8 +1,5 @@
 package com.mcp.server
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -41,23 +38,9 @@ import com.mcp.server.ui.theme.MaterialSymbol
 import com.mcp.server.ui.theme.MaterialSymbols
 import com.mcp.server.tools.ToolDefinition
 import com.mcp.server.tools.ToolKit
-import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3Finish
-import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import org.json.JSONArray
 import org.json.JSONObject
 
-class ToolsActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        m3SetupExpressiveBack()
-        setContent {
-            McpTheme {
-                ToolsScreen(onBack = { m3Finish() })
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -1,8 +1,5 @@
 package com.mcp.server
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,25 +47,10 @@ import com.mcp.server.bridge.BridgeConfig
 import com.mcp.server.bridge.BridgeManager
 import com.mcp.server.server.McpAppCtx
 import com.mcp.server.tools.ToolKit
-import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3Finish
-import com.mcp.server.ui.theme.m3StartActivity
-import com.mcp.server.ui.theme.m3SetupExpressiveBack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class BridgeActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        m3SetupExpressiveBack()
-        setContent {
-            McpTheme {
-                BridgeScreen(onBack = { m3Finish() })
-            }
-        }
-    }
-}
 
 /** 桥接列表状态 */
 private data class BridgeUiState(
@@ -79,7 +61,7 @@ private data class BridgeUiState(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BridgeScreen(onBack: () -> Unit = {}) {
+fun BridgeScreen(onBack: () -> Unit = {}, onManageTools: (String) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -191,11 +173,7 @@ fun BridgeScreen(onBack: () -> Unit = {}) {
                             showEditDialog = true
                         },
                         onDelete = { showDeleteConfirm = bridge },
-                        onManageTools = {
-                            val intent = android.content.Intent(context, BridgeToolsActivity::class.java)
-                                .putExtra("bridgeId", bridge.id)
-                            context.m3StartActivity(intent)
-                        },
+                        onManageTools = { onManageTools(bridge.id) },
                     )
                 }
             }

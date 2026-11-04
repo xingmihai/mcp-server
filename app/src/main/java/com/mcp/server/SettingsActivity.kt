@@ -6,11 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings as AndroidSettings
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,6 +35,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -59,88 +58,81 @@ import com.mcp.server.server.WakeLockHelper
 import com.mcp.server.tools.RootHelper
 import com.mcp.server.tools.Settings2
 import com.mcp.server.tools.ShizukuHelper
-import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3Finish
-import com.mcp.server.ui.theme.m3SetupExpressiveBack
 
-class SettingsActivity : ComponentActivity() {
 
-    /** 权限授权结果 tick：+1 触发设置页重新计算权限状态 */
-    private val permissionTick = mutableIntStateOf(0)
 
-    private val overlayLauncher = registerForActivityResult(
+/**
+ * 设置页路由包装：把原先 Activity 级的权限 launcher / Shizuku 监听
+ * 搬到 Compose 生命周期内。单 Activity 化后这些不能再挂在 Activity 上。
+ */
+@Composable
+fun SettingsRoute(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var permissionTick by remember { mutableIntStateOf(0) }
+
+    val overlayLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        permissionTick.intValue++
+        permissionTick++
         // 授权返回后，若悬浮窗开关已开启则立即启动悬浮窗
-        if (AndroidSettings.canDrawOverlays(this) && Settings.floatWindowEnabled(this)) {
-            FloatWindowService.start(this)
+        if (AndroidSettings.canDrawOverlays(context) && Settings.floatWindowEnabled(context)) {
+            FloatWindowService.start(context)
         }
     }
-
-    private val batteryLauncher = registerForActivityResult(
+    val batteryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
-    ) { permissionTick.intValue++ }
+    ) { permissionTick++ }
 
-    /** Shizuku 授权：通过 provider 引导，授权结果通过监听回调刷新 */
-    private val shizukuRequestCode = 10001
-
-    private val shizukuPermissionListener = object : rikka.shizuku.Shizuku.OnRequestPermissionResultListener {
-        override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
-            permissionTick.intValue++
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        m3SetupExpressiveBack()
-        setContent {
-            McpTheme {
-                SettingsScreen(
-                    onBack = { m3Finish() },
-                    permissionTick = permissionTick.intValue,
-                    onRequestOverlay = {
-                        if (!AndroidSettings.canDrawOverlays(this)) {
-                            try {
-                                overlayLauncher.launch(Intent(
-                                    AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                    Uri.parse("package:$packageName")))
-                            } catch (_: Exception) {
-                                overlayLauncher.launch(Intent(AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION))
-                            }
-                        }
-                    },
-                    onRequestBattery = {
-                        if (!isIgnoringBatteryOptimizations(this)) {
-                            try {
-                                batteryLauncher.launch(Intent(
-                                    AndroidSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                                    Uri.parse("package:$packageName")))
-                            } catch (_: Exception) {
-                                batteryLauncher.launch(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                            }
-                        }
-                    },
-                    onRequestShizuku = {
-                        try {
-                            if (rikka.shizuku.Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                                rikka.shizuku.Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-                                rikka.shizuku.Shizuku.requestPermission(shizukuRequestCode)
-                            } else {
-                                permissionTick.intValue++
-                            }
-                        } catch (_: Exception) {
-                        }
-                    },
-                )
+    val shizukuListener = remember {
+        object : rikka.shizuku.Shizuku.OnRequestPermissionResultListener {
+            override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
+                permissionTick++
             }
         }
     }
-
-    private fun isIgnoringBatteryOptimizations(ctx: Context): Boolean {
-        val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
-        return pm.isIgnoringBatteryOptimizations(ctx.packageName)
+    DisposableEffect(Unit) {
+        rikka.shizuku.Shizuku.addRequestPermissionResultListener(shizukuListener)
+        onDispose {
+            rikka.shizuku.Shizuku.removeRequestPermissionResultListener(shizukuListener)
+        }
     }
+
+    SettingsScreen(
+        onBack = onBack,
+        permissionTick = permissionTick,
+        onRequestOverlay = {
+            if (!AndroidSettings.canDrawOverlays(context)) {
+                try {
+                    overlayLauncher.launch(Intent(
+                        AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")))
+                } catch (_: Exception) {
+                    overlayLauncher.launch(Intent(AndroidSettings.ACTION_MANAGE_OVERLAY_PERMISSION))
+                }
+            }
+        },
+        onRequestBattery = {
+            if (!isIgnoringBatteryOptimizations(context)) {
+                try {
+                    batteryLauncher.launch(Intent(
+                        AndroidSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:${context.packageName}")))
+                } catch (_: Exception) {
+                    batteryLauncher.launch(Intent(AndroidSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            }
+        },
+        onRequestShizuku = {
+            try {
+                if (rikka.shizuku.Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+                    rikka.shizuku.Shizuku.requestPermission(10001)
+                } else {
+                    permissionTick++
+                }
+            } catch (_: Exception) {
+            }
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

@@ -1,8 +1,5 @@
 package com.mcp.server
 
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,21 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mcp.server.ui.theme.MaterialSymbol
 import com.mcp.server.ui.theme.MaterialSymbols
-import com.mcp.server.ui.theme.McpTheme
-import com.mcp.server.ui.theme.m3Finish
-import com.mcp.server.ui.theme.m3SetupExpressiveBack
 
-class AboutActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        m3SetupExpressiveBack()
-        setContent {
-            McpTheme {
-                AboutScreen(onBack = { m3Finish() })
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
