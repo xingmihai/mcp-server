@@ -361,22 +361,25 @@ fun MainScreen(
                 }
             },
         ) { padding ->
+            // transitionSpec 不是 Composable 作用域，先从主题取好规格再传入
+            val fastEffects = m3FastEffectsSpec<Float>()
+            val defaultSpatial = m3DefaultSpatialSpec<IntOffset>()
             AnimatedContent(
                 targetState = selectedTab,
                 transitionSpec = {
                     if (targetState > initialState) {
-                        (fadeIn(animationSpec = m3FastEffectsSpec<Float>()) +
-                            slideInHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { it / 6 })
+                        (fadeIn(animationSpec = fastEffects) +
+                            slideInHorizontally(animationSpec = defaultSpatial) { it / 6 })
                             .togetherWith(
-                                fadeOut(animationSpec = m3FastEffectsSpec<Float>()) +
-                                    slideOutHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { -it / 6 }
+                                fadeOut(animationSpec = fastEffects) +
+                                    slideOutHorizontally(animationSpec = defaultSpatial) { -it / 6 }
                             )
                     } else {
-                        (fadeIn(animationSpec = m3FastEffectsSpec<Float>()) +
-                            slideInHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { -it / 6 })
+                        (fadeIn(animationSpec = fastEffects) +
+                            slideInHorizontally(animationSpec = defaultSpatial) { -it / 6 })
                             .togetherWith(
-                                fadeOut(animationSpec = m3FastEffectsSpec<Float>()) +
-                                    slideOutHorizontally(animationSpec = m3DefaultSpatialSpec<IntOffset>()) { it / 6 }
+                                fadeOut(animationSpec = fastEffects) +
+                                    slideOutHorizontally(animationSpec = defaultSpatial) { it / 6 }
                             )
                     }
                 },
