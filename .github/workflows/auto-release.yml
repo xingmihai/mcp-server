@@ -16,7 +16,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: auto-release
+  group: auto-release-v2
   cancel-in-progress: false
 
 jobs:
@@ -24,6 +24,7 @@ jobs:
     # 固定 24.04：ubuntu-latest 在 2026-10-19~11-19 渐进迁移到 Ubuntu 26.04，
     # 避免同一天两次构建落到不同镜像；需要升级时改成 ubuntu-26.04 并验证工具链
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     # 签名材料来自 release 环境密钥（Environment secrets）
     environment: release
     env:

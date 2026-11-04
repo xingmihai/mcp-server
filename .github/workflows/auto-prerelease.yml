@@ -10,7 +10,7 @@ permissions:
 
 # 串行执行，避免并发任务同时创建多个预发行
 concurrency:
-  group: auto-prerelease
+  group: auto-prerelease-v2
   cancel-in-progress: false
 
 jobs:
@@ -18,6 +18,7 @@ jobs:
     # 固定 24.04：ubuntu-latest 在 2026-10-19~11-19 渐进迁移到 Ubuntu 26.04，
     # 避免同一天两次构建落到不同镜像；需要升级时改成 ubuntu-26.04 并验证工具链
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     # 签名材料全部来自 prerelease 环境密钥（Environment secrets）
     environment: prerelease
     env:
