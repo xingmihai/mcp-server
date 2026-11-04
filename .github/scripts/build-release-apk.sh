@@ -39,7 +39,8 @@ RC=$?
 set -e
 cat "$LOG"
 if [ "$RC" -ne 0 ]; then
-  SUMMARY=$(tail -90 "$LOG" | sed 's/%/%25/g; s/\r/%0D/g' \
+  SUMMARY=$(grep -nE '(^e: |^FAILURE:|^\* What went wrong:|^Caused by:|^Could not |^Execution failed|^\* Try:|FAILED$|requires Android Gradle|not found|Unsupported|error:|What went wrong)' "$LOG" \
+    | head -120 | sed 's/%/%25/g; s/\r/%0D/g' \
     | awk 'BEGIN{s=""} {printf "%s%s", s, $0; s="%0A"} END{print ""}')
   echo "::error title=Gradle 构建失败::${SUMMARY:-请查看构建日志}"
   exit "$RC"

@@ -5,6 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -447,7 +450,24 @@ private fun HomeTab(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         // ===== 状态卡片 =====
+        // Expressive 弹性呼吸：运行中状态灯用 spring 缓动明暗脉动
+        var pulseOn by remember { mutableStateOf(true) }
+        LaunchedEffect(Unit) {
+            while (true) {
+                pulseOn = !pulseOn
+                delay(900)
+            }
+        }
+        val pulseAlpha by animateFloatAsState(
+            targetValue = if (status.running && pulseOn) 1f else if (status.running) 0.42f else 0.6f,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow,
+            ),
+            label = "statusPulse",
+        )
         Card(
+            shape = MaterialTheme.shapes.largeIncreased,
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             ),
@@ -462,7 +482,8 @@ private fun HomeTab(
                     modifier = Modifier
                         .size(14.dp)
                         .background(
-                            color = if (status.running) Color(0xFF2E7D32) else Color(0xFF9E9E9E),
+                            color = (if (status.running) Color(0xFF2E7D32) else Color(0xFF9E9E9E))
+                                .copy(alpha = pulseAlpha),
                             shape = CircleShape,
                         ),
                 )
@@ -483,6 +504,7 @@ private fun HomeTab(
                 }
                 Button(
                     onClick = if (status.running) onStopServer else onStartServer,
+                    shape = MaterialTheme.shapes.largeIncreased,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (status.running) MaterialTheme.colorScheme.error
                         else MaterialTheme.colorScheme.primary,

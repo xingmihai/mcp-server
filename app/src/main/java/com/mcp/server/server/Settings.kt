@@ -56,6 +56,14 @@ object Settings {
         prefs(context).edit().putBoolean("wakelock", on).apply()
     }
 
+    /** M3 Expressive：Material You 动态取色开关（Android 12+ 生效，默认开启） */
+    fun dynamicColorEnabled(context: Context): Boolean =
+        prefs(context).getBoolean("dynamic_color", true)
+
+    fun setDynamicColorEnabled(context: Context, on: Boolean) {
+        prefs(context).edit().putBoolean("dynamic_color", on).apply()
+    }
+
     /** 悬浮窗状态显示 */
     fun floatWindowEnabled(context: Context): Boolean = prefs(context).getBoolean("float_window", false)
 

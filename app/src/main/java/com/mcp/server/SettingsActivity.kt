@@ -159,6 +159,7 @@ fun SettingsScreen(
     var refresh by remember { mutableIntStateOf(0) }
 
     var tokenEnabled by remember { mutableStateOf(Settings.tokenEnabled(context)) }
+    var dynamicColor by remember { mutableStateOf(Settings.dynamicColorEnabled(context)) }
     var wakeLock by remember { mutableStateOf(Settings.wakeLockEnabled(context)) }
     var floatWindow by remember { mutableStateOf(Settings.floatWindowEnabled(context)) }
     var autoStartMcp by remember { mutableStateOf(Settings.autoStart(context)) }
@@ -260,6 +261,31 @@ fun SettingsScreen(
                             refresh++
                         }) { Text("重新生成") }
                     }
+                }
+            }
+
+            // ===== 外观（M3 Expressive）=====
+            Card {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("外观", style = MaterialTheme.typography.titleSmall)
+                    Text("全局使用 Material 3 Expressive 主题（弹性动效、圆润形状、强调排版）",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.height(6.dp))
+                    ToggleRow(
+                        icon = Icons.Outlined.Wallpaper,
+                        title = "动态取色",
+                        subtitle = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                            "跟随系统壁纸颜色（Android 12+）；关闭后使用应用自带配色"
+                        else "当前系统版本不支持动态取色，已使用应用自带配色",
+                        checked = dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+                        onCheckedChange = { on ->
+                            dynamicColor = on
+                            Settings.setDynamicColorEnabled(context, on)
+                            // 主题在 setContent 层读取开关，重建 Activity 让新配色立即生效
+                            (context as? android.app.Activity)?.recreate()
+                        },
+                    )
                 }
             }
 
