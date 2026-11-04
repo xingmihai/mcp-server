@@ -4,6 +4,23 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// 版本号 / 版本名不再硬编码：默认从 Git 历史自动推导，
+// CI 可用 -PappVersionCode=... -PappVersionName=... 覆盖（见 .github/scripts/version.sh）。
+fun gitValue(vararg args: String): String = runCatching {
+    val proc = ProcessBuilder("git", *args)
+        .directory(rootDir)
+        .redirectErrorStream(true)
+        .start()
+    val out = proc.inputStream.bufferedReader().use { it.readText() }.trim()
+    if (proc.waitFor() == 0) out else ""
+}.getOrDefault("")
+
+val commitCount = gitValue("rev-list", "--count", "HEAD").toIntOrNull() ?: 1
+val latestReleaseTag = gitValue("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+val autoVersionName = latestReleaseTag.removePrefix("v").ifEmpty { "0.${commitCount}.0" }
+val appVersionCode = project.findProperty("appVersionCode")?.toString()?.toIntOrNull() ?: commitCount
+val appVersionName = project.findProperty("appVersionName")?.toString()?.takeIf { it.isNotBlank() } ?: autoVersionName
+
 android {
     namespace = "com.mcp.server"
     compileSdk = 35
@@ -12,8 +29,8 @@ android {
         applicationId = "com.mcp.server"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     buildTypes {

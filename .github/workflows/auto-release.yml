@@ -1,0 +1,100 @@
+name: 自动正式发行
+
+on:
+  # 推送 v 开头的 tag 即发布正式版，版本号直接取 tag（如 v1.2.3）
+  push:
+    tags: ['v*']
+  # 也可在 Actions 页手动发布，版本号留空则自动在最新正式版上递增补丁号
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号，如 1.2.3；留空自动递增'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    # 签名材料来自 release 环境密钥（Environment secrets）
+    environment: release
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+    steps:
+      - name: 检出代码（需完整历史与 tag）
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: 自动计算版本号
+        id: base
+        run: bash .github/scripts/version.sh
+
+      - name: 确定本次版本与产物名
+        id: ver
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          NEXT: ${{ steps.base.outputs.NEXT_VERSION }}
+          CODE: ${{ steps.base.outputs.VERSION_CODE }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "push" ]; then
+            TAG="$REF"
+            VERSION="${TAG#v}"
+          else
+            VERSION="${INPUT_VERSION:-$NEXT}"
+            TAG="v${VERSION}"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "版本号格式不合法：$VERSION（应为 1.2.3 这样的三段数字）"
+            exit 1
+          fi
+          {
+            echo "VERSION_CODE=$CODE"
+            echo "VERSION_NAME=$VERSION"
+            echo "TAG=$TAG"
+            echo "APK=app/build/outputs/apk/release/mcp-server-${VERSION}.apk"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 构建并签名 APK
+        env:
+          GRADLE_ARGS: -PappVersionCode=${{ steps.ver.outputs.VERSION_CODE }} -PappVersionName=${{ steps.ver.outputs.VERSION_NAME }}
+          OUT_APK: ${{ steps.ver.outputs.APK }}
+        run: bash .github/scripts/build-release-apk.sh
+
+      - name: 创建正式发行版并上传已签名 APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.ver.outputs.TAG }}"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "正式版 $TAG 已存在，不覆盖。请换一个版本号。"
+            exit 1
+          fi
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "v${{ steps.ver.outputs.VERSION_NAME }}" \
+            --notes "正式发行 ${{ steps.ver.outputs.VERSION_NAME }}（versionCode ${{ steps.ver.outputs.VERSION_CODE }}），构建于 $(date -u '+%Y-%m-%d %H:%M UTC')，提交 ${GITHUB_SHA}。APK 已使用环境密钥签名。" \
+            "${{ steps.ver.outputs.APK }}"
+          echo "正式版已发布：$TAG（历史正式版全部保留）"
