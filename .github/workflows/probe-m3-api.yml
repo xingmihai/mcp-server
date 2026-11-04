@@ -7,6 +7,7 @@ jobs:
   probe:
     runs-on: ubuntu-24.04
     steps:
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -14,20 +15,36 @@ jobs:
       - name: 下载 material3 AAR 并输出 API 清单
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
+          LOG=/tmp/probe.log
+          : > "$LOG"
+          say() { echo "$@" >> "$LOG"; }
+
           URL="https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3/1.5.0-beta02/material3-1.5.0-beta02.aar"
-          curl -sSL --retry 3 -o /tmp/m3.aar "$URL"
-          echo "AAR size: $(wc -c < /tmp/m3.aar)"
-          mkdir -p /tmp/m3 && cd /tmp/m3
-          unzip -o -q /tmp/m3.aar classes.jar
-          jar xf classes.jar
-          {
-            echo "===== CLASSES ====="
+          curl -sSL --retry 3 -o /tmp/m3.aar "$URL" 2>>"$LOG"
+          say "curl_rc=$? size=$(wc -c < /tmp/m3.aar 2>/dev/null)"
+          say "magic=$(head -c 4 /tmp/m3.aar 2>/dev/null | xxd -p)"
+
+          if ! unzip -t /tmp/m3.aar >/dev/null 2>&1; then
+            say "FALLBACK: 触发 gradle 解析依赖"
+            chmod +x gradlew
+            printf 'sdk.dir=%s\n' "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > local.properties
+            ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon >/dev/null 2>>"$LOG"
+            AAR=$(find "$HOME/.gradle/caches" -name 'material3-1.5.0-beta02.aar' 2>/dev/null | head -1)
+            say "gradle_aar=$AAR"
+            [ -n "$AAR" ] && cp "$AAR" /tmp/m3.aar
+          fi
+
+          if unzip -t /tmp/m3.aar >/dev/null 2>&1; then
+            mkdir -p /tmp/m3 && cd /tmp/m3
+            unzip -o -q /tmp/m3.aar classes.jar
+            jar xf classes.jar
+            say "===== CLASSES ====="
             find androidx/compose/material3 -maxdepth 1 -name '*.class' \
               | sed 's#.*/##; s#\.class##' \
-              | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Fab|Toolbar|MaterialShapes' \
-              | sort -u | head -200
-            echo "===== JAVAP ====="
+              | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Toolbar|MaterialShapes' \
+              | sort -u | head -200 >> "$LOG"
+            say "===== JAVAP ====="
             for c in ButtonGroupKt SegmentedButtonKt FloatingToolbarKt LoadingIndicatorKt \
                      ShortNavigationBarKt SnackbarKt BadgeKt ModalBottomSheetKt \
                      SplitButtonLayoutKt MaterialExpressiveThemeKt MotionSchemeKt \
@@ -35,21 +52,22 @@ jobs:
                      FlexibleBottomAppBarKt FloatingActionButtonMenuKt \
                      ToggleFloatingActionButtonKt PullToRefreshBoxKt; do
               out=$(javap -public -classpath classes.jar "androidx.compose.material3.$c" 2>/dev/null | head -45)
-              if [ -n "$out" ]; then echo "--- $c ---"; echo "$out"; fi
+              if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
             done
-          } > /tmp/api.txt
-          echo "total lines: $(wc -l < /tmp/api.txt)"
+          else
+            say "ERROR: 无法获得有效 AAR"
+            say "$(head -c 300 /tmp/m3.aar 2>/dev/null)"
+          fi
+
           python3 - <<'PY'
           from pathlib import Path
-          lines = Path('/tmp/api.txt').read_text(errors='replace').splitlines()
-          chunk, n, idx = [], 0, 1
+          lines = Path('/tmp/probe.log').read_text(errors='replace').splitlines()
+          chunk, idx = [], 1
           for l in lines:
-            if sum(len(x) + 1 for x in chunk) + len(l) > 3500:
-              text = '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)
-              print(f'::notice title=M3API-{idx}::{text}')
+            if sum(len(x)+1 for x in chunk) + len(l) > 3200:
+              print('::notice title=M3API-%d::%s' % (idx, '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
               idx += 1; chunk = []
             chunk.append(l)
           if chunk:
-            text = '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)
-            print(f'::notice title=M3API-{idx}::{text}')
+            print('::notice title=M3API-%d::%s' % (idx, '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
           PY
