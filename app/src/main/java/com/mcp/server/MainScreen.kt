@@ -281,7 +281,11 @@ fun MainScreen(
                     actions = {
                         if (selectedTab == 1 && logs.isNotEmpty()) {
                             // M3 Expressive：相关动作收进 ButtonGroup
-                            ButtonGroup(modifier = Modifier.padding(end = 8.dp)) {
+                            // overflowIndicator 无默认值；只有两个按钮不会溢出，给一个占位实现
+                            ButtonGroup(
+                                overflowIndicator = { _ -> },
+                                modifier = Modifier.padding(end = 8.dp),
+                            ) {
                                 FilledTonalButton(onClick = {
                                     val text = logs.joinToString("\n") {
                                         "${it.timeText} [${it.level}] ${it.message}"
