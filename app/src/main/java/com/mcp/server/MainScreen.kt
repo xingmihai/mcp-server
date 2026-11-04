@@ -280,23 +280,29 @@ fun MainScreen(
                     },
                     actions = {
                         if (selectedTab == 1 && logs.isNotEmpty()) {
-                            // M3 Expressive：相关动作收进 ButtonGroup
-                            // overflowIndicator 无默认值；只有两个按钮不会溢出，给一个占位实现
+                            // M3 Expressive：content 是 ButtonGroupScope builder（非 Composable），
+                            // 用 clickableItem 声明按钮；两个按钮不会溢出，overflowIndicator 占位即可
                             ButtonGroup(
                                 overflowIndicator = { _ -> },
                                 modifier = Modifier.padding(end = 8.dp),
                             ) {
-                                FilledTonalButton(onClick = {
-                                    val text = logs.joinToString("\n") {
-                                        "${it.timeText} [${it.level}] ${it.message}"
-                                    }
-                                    copyText(context, text)
-                                    scope.launch { snackbarHostState.showSnackbar("已复制全部日志") }
-                                }) { Text("复制") }
-                                FilledTonalButton(onClick = {
-                                    onClearLogs()
-                                    scope.launch { snackbarHostState.showSnackbar("日志已清空") }
-                                }) { Text("清空") }
+                                clickableItem(
+                                    onClick = {
+                                        val text = logs.joinToString("\n") {
+                                            "${it.timeText} [${it.level}] ${it.message}"
+                                        }
+                                        copyText(context, text)
+                                        scope.launch { snackbarHostState.showSnackbar("已复制全部日志") }
+                                    },
+                                    label = "复制",
+                                )
+                                clickableItem(
+                                    onClick = {
+                                        onClearLogs()
+                                        scope.launch { snackbarHostState.showSnackbar("日志已清空") }
+                                    },
+                                    label = "清空",
+                                )
                             }
                         }
                     },

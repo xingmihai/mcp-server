@@ -41,7 +41,9 @@ cat "$LOG"
 if [ "$RC" -ne 0 ]; then
   LN=$(grep -n '^\* What went wrong:' "$LOG" | head -1 | cut -d: -f1)
   [ -z "$LN" ] && LN=1
-  SUMMARY=$(sed -n "${LN},$((LN+70))p" "$LOG" | sed 's/%/%25/g; s/\r/%0D/g' \
+  SUMMARY=$({ grep -E '^e: |^w: ' "$LOG" | head -60
+              sed -n "${LN},$((LN+22))p" "$LOG"; } \
+    | sed 's/%/%25/g; s/\r/%0D/g' \
     | awk 'BEGIN{s=""} {printf "%s%s", s, $0; s="%0A"} END{print ""}')
   echo "::error title=Gradle 构建失败::${SUMMARY:-请查看构建日志}"
   exit "$RC"
