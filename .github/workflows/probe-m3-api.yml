@@ -19,52 +19,48 @@ jobs:
           LOG=/tmp/probe.log
           : > "$LOG"
           say() { echo "$@" >> "$LOG"; }
+          BASE="https://dl.google.com/dl/android/maven2/androidx/compose/material3"
+          VER="1.5.0-beta02"
+          mkdir -p /tmp/m3 && cd /tmp/m3
 
-          URL="https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3/1.5.0-beta02/material3-1.5.0-beta02.aar"
-          curl -sSL --retry 3 -o /tmp/m3.aar "$URL" 2>>"$LOG"
-          say "curl_rc=$? size=$(wc -c < /tmp/m3.aar 2>/dev/null)"
-          say "magic=$(head -c 4 /tmp/m3.aar 2>/dev/null | xxd -p)"
+          for art in material3 material3-android; do
+            URL="$BASE/$art/$VER/$art-$VER.aar"
+            curl -sSL --retry 3 -o "/tmp/$art.aar" "$URL" 2>>"$LOG"
+            say "$art: curl_rc=$? size=$(wc -c < /tmp/$art.aar 2>/dev/null) magic=$(head -c 4 /tmp/$art.aar 2>/dev/null | xxd -p)"
+            if unzip -t "/tmp/$art.aar" >/dev/null 2>&1; then
+              mkdir -p "/tmp/m3/$art" && cd "/tmp/m3/$art"
+              unzip -o -q "/tmp/$art.aar"
+              say "$art entries: $(unzip -l /tmp/$art.aar | tail -n +4 | head -12 | tr '\n' ' ')"
+              for j in $(find . -name '*.jar'); do jar xf "$j"; done
+              cd /tmp/m3
+            fi
+          done
 
-          if ! unzip -t /tmp/m3.aar >/dev/null 2>&1; then
-            say "FALLBACK: 触发 gradle 解析依赖"
-            chmod +x gradlew
-            printf 'sdk.dir=%s\n' "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > local.properties
-            ./gradlew :app:dependencies --configuration releaseRuntimeClasspath --no-daemon >/dev/null 2>>"$LOG"
-            AAR=$(find "$HOME/.gradle/caches" -name 'material3-1.5.0-beta02.aar' 2>/dev/null | head -1)
-            say "gradle_aar=$AAR"
-            [ -n "$AAR" ] && cp "$AAR" /tmp/m3.aar
-          fi
+          say "===== CLASSES ====="
+          find . -path '*androidx/compose/material3*' -maxdepth 8 -name '*.class' \
+            | sed 's#.*/##; s#\.class##' \
+            | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Toolbar|MaterialShapes' \
+            | sort -u | head -220 >> "$LOG"
+          say "class_count=$(find . -name '*.class' | wc -l)"
 
-          if unzip -t /tmp/m3.aar >/dev/null 2>&1; then
-            mkdir -p /tmp/m3 && cd /tmp/m3
-            unzip -o -q /tmp/m3.aar classes.jar
-            jar xf classes.jar
-            say "===== CLASSES ====="
-            find androidx/compose/material3 -maxdepth 1 -name '*.class' \
-              | sed 's#.*/##; s#\.class##' \
-              | grep -iE 'ButtonGroup|Segmented|FloatingToolbar|LoadingIndicator|ShortNavigation|Badge|Snackbar|BottomSheet|SplitButton|MotionScheme|MaterialExpressive|Wavy|Shapes|Typography|NavigationBar|ProgressIndicator|Card|Sheet|FAB|Toolbar|MaterialShapes' \
-              | sort -u | head -200 >> "$LOG"
-            say "===== JAVAP ====="
-            for c in ButtonGroupKt SegmentedButtonKt FloatingToolbarKt LoadingIndicatorKt \
-                     ShortNavigationBarKt SnackbarKt BadgeKt ModalBottomSheetKt \
-                     SplitButtonLayoutKt MaterialExpressiveThemeKt MotionSchemeKt \
-                     ShapesKt NavigationBarKt WavyProgressIndicatorKt \
-                     FlexibleBottomAppBarKt FloatingActionButtonMenuKt \
-                     ToggleFloatingActionButtonKt PullToRefreshBoxKt; do
-              out=$(javap -public -classpath classes.jar "androidx.compose.material3.$c" 2>/dev/null | head -45)
-              if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
-            done
-          else
-            say "ERROR: 无法获得有效 AAR"
-            say "$(head -c 300 /tmp/m3.aar 2>/dev/null)"
-          fi
+          say "===== JAVAP ====="
+          CP=$(find /tmp/m3 -name '*.jar' | tr '\n' ':')
+          for c in ButtonGroupKt SegmentedButtonKt FloatingToolbarKt LoadingIndicatorKt \
+                   ShortNavigationBarKt SnackbarKt BadgeKt ModalBottomSheetKt \
+                   SplitButtonLayoutKt MaterialExpressiveThemeKt MotionSchemeKt \
+                   ShapesKt NavigationBarKt WavyProgressIndicatorKt \
+                   FlexibleBottomAppBarKt FloatingActionButtonMenuKt \
+                   ToggleFloatingActionButtonKt PullToRefreshBoxKt; do
+            out=$(javap -public -classpath "$CP" "androidx.compose.material3.$c" 2>/dev/null | head -40)
+            if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
+          done
 
           python3 - <<'PY'
           from pathlib import Path
           lines = Path('/tmp/probe.log').read_text(errors='replace').splitlines()
           chunk, idx = [], 1
           for l in lines:
-            if sum(len(x)+1 for x in chunk) + len(l) > 3200:
+            if sum(len(x)+1 for x in chunk) + len(l) > 3000:
               print('::notice title=M3API-%d::%s' % (idx, '%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
               idx += 1; chunk = []
             chunk.append(l)
