@@ -11,40 +11,42 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: 精确签名（第二批）
+      - name: 第三批精确签名
         shell: bash
         run: |
           set +e
           LOG=/tmp/api.log; : > "$LOG"
           say() { echo "$@" >> "$LOG"; }
-          URL="https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-android/1.5.0-beta02/material3-android-1.5.0-beta02.aar"
-          curl -sSL --retry 3 -o /tmp/m3.aar "$URL"
+          DL="https://dl.google.com/dl/android/maven2"
+          curl -sSL --retry 3 -o /tmp/m3.aar "$DL/androidx/compose/material3/material3-android/1.5.0-beta02/material3-android-1.5.0-beta02.aar"
+          curl -sSL --retry 3 -o /tmp/shapes.jar "$DL/androidx/graphics/graphics-shapes-android/1.0.1/graphics-shapes-android-1.0.1.jar"
           mkdir -p /tmp/m3 && cd /tmp/m3
           unzip -o -q /tmp/m3.aar classes.jar
           jar xf classes.jar
-          CP=$(find /tmp/m3 -name '*.jar' | tr '\n' ':')
-          for c in \
-            WavyProgressIndicatorDefaults WavyProgressIndicatorKt \
-            MaterialShapes MaterialShapesKt 'MaterialShapes$Companion' \
-            AnimatedShapeState ShapesKt ShapeDefaults \
-            SplitButtonKt ToggleButtonKt TypographyKt ColorSchemeKt \
-            MaterialExpressiveThemeKt ButtonShapes SplitButtonShapes; do
-            out=$(javap -public -classpath "$CP" "androidx.compose.material3.$c" 2>/dev/null | head -28)
-            if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
+          CP="/tmp/m3:/tmp/m3/classes.jar:/tmp/shapes.jar"
+          say "===== MaterialShapes Companion FULL ====="
+          javap -public -classpath "$CP" 'androidx.compose.material3.MaterialShapes$Companion' 2>&1 | grep -E 'get[A-Z]|class ' >> "$LOG"
+          say "===== expressive color schemes ====="
+          javap -public -classpath "$CP" androidx.compose.material3.ColorSchemeKt 2>&1 | grep -iE 'expressive|ColorScheme\(' | head -20 >> "$LOG"
+          for c in AnimatedShapeState ShapeDefaults TypographyKt MaterialExpressiveThemeKt \
+                   ButtonShapes SplitButtonShapes ToggleButtonShapes IconButtonShapes \
+                   FloatingToolbarColors SnackbarHostKt; do
+            out=$(javap -public -classpath "$CP" "androidx.compose.material3.$c" 2>&1 | head -30)
+            say "--- $c ---"; say "$out"
           done
-          say "===== MaterialShapes companion fields ====="
-          javap -public -classpath "$CP" 'androidx.compose.material3.MaterialShapes$Companion' 2>/dev/null | head -60 >> "$LOG"
-          say "===== graphics-shapes API ====="
-          javap -public -classpath "$CP" androidx.graphics.shapes.RoundedPolygon 2>/dev/null | head -25 >> "$LOG"
+          say "===== SplitButtonDefaults trailing/more ====="
+          javap -public -classpath "$CP" androidx.compose.material3.SplitButtonDefaults 2>&1 | grep -iE 'TrailingButton|LeadingButton|Shapes|Spacing' | head -25 >> "$LOG"
+          say "===== graphics-shapes Morph / RoundedPolygon ====="
+          javap -public -classpath "$CP" androidx.graphics.shapes.Morph 2>&1 | head -30 >> "$LOG"
+          javap -public -classpath "$CP" androidx.graphics.shapes.RoundedPolygon 2>&1 | head -22 >> "$LOG"
           python3 - <<'PY'
           from pathlib import Path
           lines=Path('/tmp/api.log').read_text(errors='replace').splitlines()
-          # 分 6 块，每块控制在 6000 字符以内，避免工作流注解 10 条上限
           chunk,idx=[],1
           for l in lines:
             if sum(len(x)+1 for x in chunk)+len(l)>5800:
-              print('::notice title=EXP2-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+              print('::notice title=EXP3-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
               idx+=1; chunk=[]
             chunk.append(l)
-          if chunk: print('::notice title=EXP2-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+          if chunk: print('::notice title=EXP3-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
           PY
