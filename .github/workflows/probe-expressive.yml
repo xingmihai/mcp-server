@@ -1,0 +1,61 @@
+name: 探测 Expressive API
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: 反编译 material3 AAR 输出精确签名
+        shell: bash
+        run: |
+          set +e
+          LOG=/tmp/api.log; : > "$LOG"
+          say() { echo "$@" >> "$LOG"; }
+          URL="https://dl.google.com/dl/android/maven2/androidx/compose/material3/material3-android/1.5.0-beta02/material3-android-1.5.0-beta02.aar"
+          curl -sSL --retry 3 -o /tmp/m3.aar "$URL"
+          say "AAR size=$(wc -c < /tmp/m3.aar)"
+          mkdir -p /tmp/m3 && cd /tmp/m3
+          unzip -o -q /tmp/m3.aar classes.jar
+          jar xf classes.jar
+          say "===== RELEVANT CLASSES ====="
+          find androidx/compose/material3 -maxdepth 1 -name '*.class' \
+            | sed 's#.*/##; s#\.class##' \
+            | grep -iE 'Split|ButtonGroup|FloatingToolbar|LoadingIndicator|Wavy|MaterialShapes|AnimatedShape|Shape|Morph|Typography|ColorScheme|Toolbar|Fab|Progress|ToggleButton' \
+            | grep -v '\$' | sort -u >> "$LOG"
+          say "===== JAVAP ====="
+          CP=$(find /tmp/m3 -name '*.jar' | tr '\n' ':')
+          for c in \
+            SplitButtonLayoutKt SplitButtonDefaultsKt SplitButtonDefaults \
+            ButtonGroupKt ButtonGroupDefaults ButtonGroupScope ButtonGroupScopeImpl \
+            ButtonGroupParentData ClickableButtonGroupItem CustomButtonGroupItem \
+            FloatingToolbarKt FloatingToolbarDefaults FloatingToolbarState \
+            LoadingIndicatorKt LoadingIndicatorDefaults LoadingIndicatorTokens \
+            CircularWavyProgressModifiersKt LinearWavyProgressModifiersKt \
+            ProgressIndicatorDefaults ProgressIndicatorKt \
+            MaterialShapes MaterialShapesKt MaterialShapes\$Companion \
+            AnimatedShapeState AnimatedShapeStateKt \
+            ShapesKt Shapes ButtonShapes IconButtonShapes ChipShapes \
+            TypographyKt Typography ColorSchemeKt ColorScheme \
+            MaterialExpressiveThemeKt MotionSchemeKt MotionScheme \
+            ToggleButtonKt ToggleButtonDefaults SplitButtonKt \
+            FloatingActionButtonKt LargeFloatingActionButtonKt; do
+            out=$(javap -public -classpath "$CP" "androidx.compose.material3.$c" 2>/dev/null | head -55)
+            if [ -n "$out" ]; then say "--- $c ---"; say "$out"; fi
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          lines=Path('/tmp/api.log').read_text(errors='replace').splitlines()
+          chunk,idx=[],1
+          for l in lines:
+            if sum(len(x)+1 for x in chunk)+len(l)>3000:
+              print('::notice title=EXP-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+              idx+=1; chunk=[]
+            chunk.append(l)
+          if chunk: print('::notice title=EXP-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+          PY
