@@ -117,9 +117,9 @@ class MorphShape(
         density: Density,
     ): Outline {
         if (size.width <= 0f || size.height <= 0f) {
-            return Outline.Rect(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height))
+            return Outline.Rectangle(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height))
         }
-        val path: Path = toPath(Morph(start, end), progress.coerceIn(0f, 1f), Path(), 0)
+        val path: Path = Morph(start, end).toPath(progress.coerceIn(0f, 1f))
         val bounds = path.getBounds()
         val sx = if (bounds.width > 0f) size.width / bounds.width else 1f
         val sy = if (bounds.height > 0f) size.height / bounds.height else 1f
