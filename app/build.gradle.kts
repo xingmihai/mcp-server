@@ -23,7 +23,7 @@ val appVersionName = project.findProperty("appVersionName")?.toString()?.takeIf 
 
 android {
     namespace = "com.mcp.server"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.mcp.server"
@@ -55,9 +55,10 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2025.05.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
+    // 显式覆盖 BOM 的 material3 1.4.0：M3 Expressive 全套组件在 1.5.0 线
+    implementation("androidx.compose.material3:material3:1.5.0-beta02")
     implementation("androidx.activity:activity-compose:1.9.1")
-    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
