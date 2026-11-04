@@ -39,8 +39,7 @@ RC=$?
 set -e
 cat "$LOG"
 if [ "$RC" -ne 0 ]; then
-  SUMMARY=$(grep -E '^(e:|FAILURE:|> |\* |Caused by:|Could not|Execution failed|Requires|Dependency|Error)' "$LOG" \
-    | tail -25 | sed 's/%/%25/g; s/\r/%0D/g' \
+  SUMMARY=$(tail -90 "$LOG" | sed 's/%/%25/g; s/\r/%0D/g' \
     | awk 'BEGIN{s=""} {printf "%s%s", s, $0; s="%0A"} END{print ""}')
   echo "::error title=Gradle 构建失败::${SUMMARY:-请查看构建日志}"
   exit "$RC"
