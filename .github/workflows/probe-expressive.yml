@@ -1,0 +1,69 @@
+name: 探测 navigationevent API
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: 解析 POM 并反编译 navigationevent
+        shell: bash
+        run: |
+          set +e
+          LOG=/tmp/api.log; : > "$LOG"
+          say() { echo "$@" >> "$LOG"; }
+          DL="https://dl.google.com/dl/android/maven2"
+          curl -sSL --retry 3 -o /tmp/nav.pom "$DL/androidx/navigation/navigation-compose/2.10.2/navigation-compose-2.10.2.pom"
+          say "===== navigationevent deps in POM ====="
+          grep -i -A 2 -B 1 'navigationevent' /tmp/nav.pom >> "$LOG"
+          V=$(grep -A 2 '<artifactId>navigationevent' /tmp/nav.pom | grep -oP '(?<=<version>)[^<]+' | head -1)
+          [ -z "$V" ] && V=$(grep -oP 'navigationevent[^<]*|(?<=<version>)[^<]+' /tmp/nav.pom | grep -E '^[0-9]' | head -1)
+          say "RESOLVED_VERSION=$V"
+          [ -z "$V" ] && V="1.0.0"
+          for A in navigationevent-android navigationevent-compose-android; do
+            U="$DL/androidx/navigationevent/$A/$V/$A-$V.aar"
+            say "URL $U"
+            curl -sSL --retry 3 -o "/tmp/$A.aar" "$U"
+            say "  size=$(wc -c < /tmp/$A.aar) magic=$(head -c 4 /tmp/$A.aar | xxd -p)"
+          done
+          mkdir -p /tmp/cls && cd /tmp/cls
+          for A in navigationevent-android navigationevent-compose-android; do
+            mkdir -p "$A" && cd "$A" && unzip -o -q "/tmp/$A.aar" classes.jar && jar xf classes.jar && cd ..
+          done
+          say "===== ALL navigationevent classes ====="
+          find . -path '*navigationevent*' -name '*.class' | sed 's#^\./##; s#/#.#g; s#\.class##' | grep -v '\$' | sort >> "$LOG"
+          say "===== JAVAP ====="
+          CP="/tmp/cls/navigationevent-android:/tmp/cls/navigationevent-android/classes.jar:/tmp/cls/navigationevent-compose-android:/tmp/cls/navigationevent-compose-android/classes.jar"
+          for C in \
+            androidx.navigationevent.compose.NavigationBackHandlerKt \
+            androidx.navigationevent.compose.NavigationEventStateKt \
+            androidx.navigationevent.compose.NavigationEventState \
+            androidx.navigationevent.NavigationEventState \
+            androidx.navigationevent.NavigationEventTransitionState \
+            androidx.navigationevent.NavigationEventTransitionState\$InProgress \
+            androidx.navigationevent.NavigationEventTransitionState\$Idle \
+            androidx.navigationevent.NavigationEventInfo \
+            androidx.navigationevent.NavigationEventInfo\$None \
+            androidx.navigationevent.NavigationEvent \
+            androidx.navigationevent.NavigationEventHandler \
+            androidx.navigationevent.NavigationEventDispatcher \
+            androidx.navigationevent.NavigationEventPriority; do
+            out=$(javap -public -classpath "$CP" "$C" 2>&1 | head -32)
+            if [ -n "$out" ]; then say "--- $C ---"; say "$out"; fi
+          done
+          python3 - <<'PY'
+          from pathlib import Path
+          lines=Path('/tmp/api.log').read_text(errors='replace').splitlines()
+          chunk,idx=[],1
+          for l in lines:
+            if sum(len(x)+1 for x in chunk)+len(l)>5800:
+              print('::notice title=NEV-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+              idx+=1; chunk=[]
+            chunk.append(l)
+          if chunk: print('::notice title=NEV-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+          PY
