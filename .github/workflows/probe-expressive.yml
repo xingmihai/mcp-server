@@ -11,7 +11,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: 解析 POM 并反编译 navigationevent
+      - name: POM 全文 + 版本试探 + 反编译
         shell: bash
         run: |
           set +e
@@ -19,51 +19,44 @@ jobs:
           say() { echo "$@" >> "$LOG"; }
           DL="https://dl.google.com/dl/android/maven2"
           curl -sSL --retry 3 -o /tmp/nav.pom "$DL/androidx/navigation/navigation-compose/2.10.2/navigation-compose-2.10.2.pom"
-          say "===== navigationevent deps in POM ====="
-          grep -i -A 2 -B 1 'navigationevent' /tmp/nav.pom >> "$LOG"
-          V=$(grep -A 2 '<artifactId>navigationevent' /tmp/nav.pom | grep -oP '(?<=<version>)[^<]+' | head -1)
-          [ -z "$V" ] && V=$(grep -oP 'navigationevent[^<]*|(?<=<version>)[^<]+' /tmp/nav.pom | grep -E '^[0-9]' | head -1)
-          say "RESOLVED_VERSION=$V"
-          [ -z "$V" ] && V="1.0.0"
-          for A in navigationevent-android navigationevent-compose-android; do
-            U="$DL/androidx/navigationevent/$A/$V/$A-$V.aar"
-            say "URL $U"
-            curl -sSL --retry 3 -o "/tmp/$A.aar" "$U"
-            say "  size=$(wc -c < /tmp/$A.aar) magic=$(head -c 4 /tmp/$A.aar | xxd -p)"
+          say "===== POM FULL ====="
+          cat /tmp/nav.pom >> "$LOG"
+          say "===== VERSION PROBE ====="
+          V=""
+          for CAND in 1.0.0 1.0.1 1.0.2 1.0.3 1.1.0 1.1.1 1.2.0 1.3.0 2.10.2; do
+            U="$DL/androidx/navigationevent/navigationevent-compose-android/$CAND/navigationevent-compose-android-$CAND.aar"
+            curl -sSL --retry 1 -o /tmp/t.aar "$U"
+            SZ=$(wc -c < /tmp/t.aar); MAG=$(head -c 4 /tmp/t.aar | xxd -p)
+            say "$CAND size=$SZ magic=$MAG"
+            if [ "$MAG" = "504b0304" ] && [ "$SZ" -gt 5000 ]; then V="$CAND"; cp /tmp/t.aar /tmp/nev-compose.aar; fi
           done
-          mkdir -p /tmp/cls && cd /tmp/cls
-          for A in navigationevent-android navigationevent-compose-android; do
-            mkdir -p "$A" && cd "$A" && unzip -o -q "/tmp/$A.aar" classes.jar && jar xf classes.jar && cd ..
-          done
-          say "===== ALL navigationevent classes ====="
-          find . -path '*navigationevent*' -name '*.class' | sed 's#^\./##; s#/#.#g; s#\.class##' | grep -v '\$' | sort >> "$LOG"
-          say "===== JAVAP ====="
-          CP="/tmp/cls/navigationevent-android:/tmp/cls/navigationevent-android/classes.jar:/tmp/cls/navigationevent-compose-android:/tmp/cls/navigationevent-compose-android/classes.jar"
-          for C in \
-            androidx.navigationevent.compose.NavigationBackHandlerKt \
-            androidx.navigationevent.compose.NavigationEventStateKt \
-            androidx.navigationevent.compose.NavigationEventState \
-            androidx.navigationevent.NavigationEventState \
-            androidx.navigationevent.NavigationEventTransitionState \
-            androidx.navigationevent.NavigationEventTransitionState\$InProgress \
-            androidx.navigationevent.NavigationEventTransitionState\$Idle \
-            androidx.navigationevent.NavigationEventInfo \
-            androidx.navigationevent.NavigationEventInfo\$None \
-            androidx.navigationevent.NavigationEvent \
-            androidx.navigationevent.NavigationEventHandler \
-            androidx.navigationevent.NavigationEventDispatcher \
-            androidx.navigationevent.NavigationEventPriority; do
-            out=$(javap -public -classpath "$CP" "$C" 2>&1 | head -32)
-            if [ -n "$out" ]; then say "--- $C ---"; say "$out"; fi
-          done
+          say "RESOLVED=$V"
+          if [ -n "$V" ]; then
+            curl -sSL --retry 3 -o /tmp/nev-core.aar "$DL/androidx/navigationevent/navigationevent-android/$V/navigationevent-android-$V.aar"
+            say "core size=$(wc -c < /tmp/nev-core.aar) magic=$(head -c 4 /tmp/nev-core.aar | xxd -p)"
+            mkdir -p /tmp/cls/core /tmp/cls/compose
+            (cd /tmp/cls/core && unzip -o -q /tmp/nev-core.aar classes.jar && jar xf classes.jar)
+            (cd /tmp/cls/compose && unzip -o -q /tmp/nev-compose.aar classes.jar && jar xf classes.jar)
+            say "===== ALL classes ====="
+            find /tmp/cls -name '*.class' | sed 's#/tmp/cls/[^/]*/##; s#/#.#g; s#\.class##' | grep -v '\$' | sort >> "$LOG"
+            say "===== JAVAP ====="
+            CP="/tmp/cls/core:/tmp/cls/core/classes.jar:/tmp/cls/compose:/tmp/cls/compose/classes.jar"
+            for C in $(find /tmp/cls -name '*.class' | sed 's#/tmp/cls/[^/]*/##; s#/#.#g; s#\.class##' | grep -v '\$' | sort); do
+              case "$C" in
+                *NavigationBackHandler*|*NavigationEventState*|*TransitionState*|*NavigationEventInfo*|*NavigationEvent|*NavigationEventHandler*|*NavigationEventDispatcher*|*NavigationEventPriority*|*NavigationEventKt*|*NavigationEventHandlerKt*)
+                  out=$(javap -public -classpath "$CP" "$C" 2>&1 | head -26)
+                  if [ -n "$out" ] && ! echo "$out" | grep -q 'class not found'; then say "--- $C ---"; say "$out"; fi ;;
+              esac
+            done
+          fi
           python3 - <<'PY'
           from pathlib import Path
           lines=Path('/tmp/api.log').read_text(errors='replace').splitlines()
           chunk,idx=[],1
           for l in lines:
-            if sum(len(x)+1 for x in chunk)+len(l)>5800:
-              print('::notice title=NEV-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+            if sum(len(x)+1 for x in chunk)+len(l)>5500:
+              print('::notice title=NEV2-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
               idx+=1; chunk=[]
             chunk.append(l)
-          if chunk: print('::notice title=NEV-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
+          if chunk: print('::notice title=NEV2-%d::%s'%(idx,'%0A'.join(x.replace('%','%25').replace('\r','%0D') for x in chunk)))
           PY
