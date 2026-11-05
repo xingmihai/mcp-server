@@ -68,6 +68,8 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.9.1")
     // 单 Activity 导航：跨页转场走 MotionScheme 的 spring token
     implementation("androidx.navigation:navigation-compose:2.10.2")
+    // 预测性返回走 navigationevent 通道；锁定探针验证过的 1.1.2（Gradle 实际解析版本）
+    implementation("androidx.navigationevent:navigationevent-compose:1.1.2")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
